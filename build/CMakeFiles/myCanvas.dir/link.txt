@@ -1,0 +1,1 @@
+/usr/sbin/c++ -Wl,--dependency-file=CMakeFiles/myCanvas.dir/link.d CMakeFiles/myCanvas.dir/src/main.cpp.o -o myCanvas   -L/home/james/Projects/myCanvas/lib  -Wl,-rpath,/home/james/Projects/myCanvas/lib -lraylib

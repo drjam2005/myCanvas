@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/james/Projects/myCanvas/build",
+  "command": "/usr/sbin/c++  -I/home/james/Projects/myCanvas/include  -o CMakeFiles/myCanvas.dir/src/main.cpp.o -c /home/james/Projects/myCanvas/src/main.cpp",
+  "file": "/home/james/Projects/myCanvas/src/main.cpp",
+  "output": "CMakeFiles/myCanvas.dir/src/main.cpp.o"
+}
+]
