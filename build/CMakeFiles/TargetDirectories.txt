@@ -1,3 +1,0 @@
-/home/james/Projects/myCanvas/build/CMakeFiles/myCanvas.dir
-/home/james/Projects/myCanvas/build/CMakeFiles/edit_cache.dir
-/home/james/Projects/myCanvas/build/CMakeFiles/rebuild_cache.dir
