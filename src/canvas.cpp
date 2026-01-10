@@ -72,6 +72,18 @@ void Canvas::drawLine(Vector2 v1, Vector2 v2) {
 void Canvas::Update() {
     Vector2 mousePos = GetMousePosition();
 	if(IsKeyDown(KEY_LEFT_SHIFT)){
+		if(IsKeyPressed(KEY_Z)){
+			if (!redo.empty()) {
+				size_t layerIdx = redo.top().first;
+				
+				undo.push({layerIdx, layers[layerIdx].pixels});
+				
+				layers[layerIdx].pixels = redo.top().second;
+				redo.pop();
+
+				UpdateTexture(layers[layerIdx].tex, layers[layerIdx].pixels.data());
+			}
+		}
 		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 			prevMousePos = GetMousePosition();
 
@@ -102,15 +114,19 @@ void Canvas::Update() {
 				selectedLayer--;
 			}
 		}
-		if (IsKeyPressed(KEY_Z)){
-			if(!undo.empty()){
-				std::cout << "un" << '\n';
-				size_t layer = undo.top().first;
-				layers[layer].pixels = undo.top().second;
-				undo.pop();
-				UpdateTexture(layers[layer].tex, layers[layer].pixels.data());
-				mouseState =IDLE;
+		if (IsKeyPressed(KEY_Z)) {
+				if (!undo.empty()) {
+					size_t layerIdx = undo.top().first;
+					
+					redo.push({layerIdx, layers[layerIdx].pixels});
+
+					layers[layerIdx].pixels = undo.top().second;
+					undo.pop();
+
+					UpdateTexture(layers[layerIdx].tex, layers[layerIdx].pixels.data());
+					mouseState = IDLE;
 			}
+			return;
 		}
 		if(IsKeyPressed(KEY_ONE))
 			transparency = 255/4;
@@ -146,6 +162,8 @@ void Canvas::Update() {
 
 	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
 		undo.push({selectedLayer, getCurrentLayer().pixels});
+		while(!redo.empty())
+			redo.pop();
 	}
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         if(mouseState == HELD && prevMousePos.x >= 0) {
@@ -188,6 +206,7 @@ void Canvas::Render() {
 	for(int i = layers.size()-1, y = 0; i >= 0; i--, y++){
 		DrawText(TextFormat("Layer: %d", i), 20, 80+(20*y), 20, i == selectedLayer ? GREEN : BLACK);
 	}
-	DrawText((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-40.0f, 20, BLACK);
+	DrawText((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, BLACK);
+	DrawText(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, BLACK);
 }
 
