@@ -4,6 +4,7 @@ project(myCanvas)
 set(exec myCanvas)
 set(src
 	src/main.cpp
+	src/canvas.cpp
 )
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
