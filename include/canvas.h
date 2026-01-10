@@ -3,7 +3,7 @@
 #define CANVAS_H
 
 #include <raylib.h>
-#include <stack>
+#include <deque>
 #include <unordered_map>
 #include <vector>
 
@@ -43,8 +43,8 @@ struct Layer {
 class Canvas {
 private:
     std::vector<Layer> layers;
-	std::stack<std::pair<size_t, std::vector<Color>>> undo;
-	std::stack<std::pair<size_t, std::vector<Color>>> redo;
+	std::deque<std::pair<size_t, std::vector<Color>>> undo;
+	std::deque<std::pair<size_t, std::vector<Color>>> redo;
 	std::unordered_map<char, Color> colors;
 
     MOUSE_STATE mouseState;

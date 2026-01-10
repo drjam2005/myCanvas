@@ -74,12 +74,11 @@ void Canvas::Update() {
 	if(IsKeyDown(KEY_LEFT_SHIFT)){
 		if(IsKeyPressed(KEY_Z)){
 			if (!redo.empty()) {
-				size_t layerIdx = redo.top().first;
+				size_t layerIdx = redo.front().first;
 				
-				undo.push({layerIdx, layers[layerIdx].pixels});
-				
-				layers[layerIdx].pixels = redo.top().second;
-				redo.pop();
+				undo.push_front({layerIdx, layers[layerIdx].pixels});
+				layers[layerIdx].pixels = redo.front().second;
+				redo.pop_front();
 
 				UpdateTexture(layers[layerIdx].tex, layers[layerIdx].pixels.data());
 			}
@@ -116,12 +115,12 @@ void Canvas::Update() {
 		}
 		if (IsKeyPressed(KEY_Z)) {
 				if (!undo.empty()) {
-					size_t layerIdx = undo.top().first;
+					size_t layerIdx = undo.front().first;
 					
-					redo.push({layerIdx, layers[layerIdx].pixels});
+					redo.push_front({layerIdx, layers[layerIdx].pixels});
 
-					layers[layerIdx].pixels = undo.top().second;
-					undo.pop();
+					layers[layerIdx].pixels = undo.front().second;
+					undo.pop_front();
 
 					UpdateTexture(layers[layerIdx].tex, layers[layerIdx].pixels.data());
 					mouseState = IDLE;
@@ -161,9 +160,9 @@ void Canvas::Update() {
 	}
 
 	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-		undo.push({selectedLayer, getCurrentLayer().pixels});
+		undo.push_front({selectedLayer, getCurrentLayer().pixels});
 		while(!redo.empty())
-			redo.pop();
+			redo.pop_back();
 	}
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         if(mouseState == HELD && prevMousePos.x >= 0) {
