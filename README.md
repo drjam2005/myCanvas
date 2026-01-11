@@ -16,7 +16,7 @@ Fun little drawing side-project
 ## Building
 -- Unix Systems:
 ```bash
-	$ mkir build
+	$ mkdir build
 	$ cd build/
 	$ cmake ..
 	$ make
