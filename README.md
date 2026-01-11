@@ -13,7 +13,7 @@ Fun little drawing side-project
 >- C++ Compiler (ideally gcc)
 >- MinGW compiler (Windows)
 
-## Building
+## Building and Running
 -- Unix Systems:
 ```bash
 	$ mkdir build
