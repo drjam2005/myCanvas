@@ -310,9 +310,12 @@ void Canvas::Update() {
         prevMousePos = {-1,-1};
     }
 
-    for(auto& l : layers) {
-        UpdateTexture(l.tex, l.pixels.data());
-    }
+	if(mouseState != IDLE){
+		//for(auto& l : layers) {
+		//	UpdateTexture(l.tex, l.pixels.data());
+		//}
+		UpdateTexture(layers[selectedLayer].tex, layers[selectedLayer].pixels.data());
+	}
 
 }
 

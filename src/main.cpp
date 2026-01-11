@@ -1,8 +1,8 @@
 #include <raylib.h>
 #include <canvas.h>
 
-#define WIDTH 600
-#define HEIGHT 900
+#define WIDTH 800
+#define HEIGHT 600
 
 int main(int argc, char** argv){
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
