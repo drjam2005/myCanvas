@@ -327,7 +327,6 @@ void Canvas::Render() {
 		DrawTexture(l.tex, 0, 0, WHITE);
 		EndBlendMode();
     }
-	DrawCircleLinesV(GetMousePosition(), isBrush ? brushSize : eraserSize, GRAY);
 	// draw colors
 	DrawText("Color Bindings: ", 20, 20, 20, BLACK);
 	size_t x = colors.size();
@@ -357,5 +356,8 @@ void Canvas::Render() {
 	}
 	DrawText((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, BLACK);
 	DrawText(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, BLACK);
+	BeginBlendMode(BLEND_SUBTRACT_COLORS);
+	DrawCircleLinesV(GetMousePosition(), isBrush ? brushSize : eraserSize, GRAY);
+	EndBlendMode();
 }
 
