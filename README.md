@@ -21,10 +21,26 @@ Fun little drawing side-project
 	$ cmake ..
 	$ make
 ```
+- Running:
+```
+	// running temporarily
+	$ ./myCanvas
+
+	// running with a file to load/save
+	$ ./myCanvas fileName
+```
 -- Windows Systems:
 ```cmd
 	$ cmake -S . -B build -G "MinGW MakeFiles"
 	$ cmake --build build
+```
+- Running:
+```
+	// running temporarily
+	$ myCanvas.exe
+
+	// running with a file to load/save
+	$ myCanvas.exe fileName
 ```
 
 ## BINDINGS
