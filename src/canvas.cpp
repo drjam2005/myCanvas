@@ -294,6 +294,8 @@ void Canvas::Update() {
 
 	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
 		undo.push_front({selectedLayer, getCurrentLayer().pixels});
+		if(undo.size() > 10)
+			undo.pop_back();
 		while(!redo.empty())
 			redo.pop_back();
 	}
