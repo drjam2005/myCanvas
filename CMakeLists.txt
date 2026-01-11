@@ -18,26 +18,32 @@ target_include_directories(${exec} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_directories(${exec} PRIVATE
-    ${CMAKE_SOURCE_DIR}/lib
-)
+if (WIN32)
+    target_link_directories(${exec} PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/windows
+    )
+else()
+    target_link_directories(${exec} PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/unix
+    )
+endif()
 
-# ---- raylib ----
 target_link_libraries(${exec} PRIVATE raylib)
 
-# ---- Platform-specific linking ----
+# ---- Platform-specific deps ----
 if (WIN32)
     target_link_libraries(${exec} PRIVATE
         winmm
         gdi32
         opengl32
+        shell32
+        user32
     )
 
-    # Copy raylib.dll beside the exe
     add_custom_command(
         TARGET ${exec} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_SOURCE_DIR}/lib/raylib.dll
+            ${CMAKE_SOURCE_DIR}/lib/windows/raylib.dll
             $<TARGET_FILE_DIR:${exec}>
     )
 
@@ -50,4 +56,3 @@ elseif (UNIX)
         X11
     )
 endif()
-
