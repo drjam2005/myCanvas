@@ -2,6 +2,7 @@
 #ifndef CANVAS_H
 #define CANVAS_H
 
+#include <string>
 #include <raylib.h>
 #include <deque>
 #include <unordered_map>
@@ -15,12 +16,13 @@ enum MOUSE_STATE {
 struct Layer {
     int width;
     int height;
-    float opacity;           
+    char opacity;           
     std::vector<Color> pixels;
     Texture2D tex;
+	BlendMode blendingMode;
 
     Layer(int w, int h, bool whiteBackground = false)
-        : width(w), height(h), opacity(1.0f), pixels(w*h)
+        : width(w), height(h), opacity(1.0f), pixels(w*h), blendingMode(BLEND_ALPHA)
     {
         Color fill = whiteBackground ? Color{255,255,255,255} : Color{0,0,0,0};
         std::fill(pixels.begin(), pixels.end(), fill);
@@ -42,6 +44,7 @@ struct Layer {
 
 class Canvas {
 private:
+	std::string fileName;
     std::vector<Layer> layers;
 	std::deque<std::pair<size_t, std::vector<Color>>> undo;
 	std::deque<std::pair<size_t, std::vector<Color>>> redo;
@@ -59,7 +62,8 @@ private:
 	char transparency;
     size_t selectedLayer;
 public:
-    Canvas(int width, int height, size_t maxLayers);
+    Canvas(int width, int height, size_t maxLayers, std::string fileName);
+	Canvas() {}
 
     void Update();
     void Render();
@@ -71,4 +75,3 @@ private:
 };
 
 #endif
-

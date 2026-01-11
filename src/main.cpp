@@ -1,14 +1,19 @@
 #include <raylib.h>
 #include <canvas.h>
 
-#define WIDTH 640
-#define HEIGHT 480
+#define WIDTH 600
+#define HEIGHT 900
 
-int main(){
+int main(int argc, char** argv){
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
 	InitWindow(WIDTH, HEIGHT, "myCanvas");
 	HideCursor();
-	Canvas canvas(WIDTH, HEIGHT, 16);
+
+	Canvas canvas; std::string fileName = "";
+	if(argc == 2)
+		fileName = argv[1];
+	canvas = Canvas(WIDTH, HEIGHT, 16, fileName);
+	
 	while(!WindowShouldClose()){
 		canvas.Update();
 
