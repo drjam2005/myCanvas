@@ -30,6 +30,7 @@ Fun little drawing side-project
 ## BINDINGS
 ### brushes
 - `LeftMouseDown` = `Draw`
+- `Shift + (Move Mouse Left/Right)` = `Resize Brush`
 - `E` = `Toggle Eraser/Brush`
 - `Ctrl+1 -> Ctrl+4` = Transparency from `25% -> 100%`
 
