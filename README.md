@@ -59,6 +59,8 @@ Fun little drawing side-project
 - `Ctrl+A/D` = `Cycle between Blending Modes`
 
 ### misc
+- `Space + LeftMouseDown` = `Pan`
+- `Ctrl + Space + LeftMouseDown + (Move Mouse Up/Down)` = `Zoom In/Out`
 - `Ctrl+Z` = `Undo` (max of 10 undos)
 - `Ctrl+Shift+Z` = `Redo`
 - `Enter` = `Save`
