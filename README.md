@@ -31,7 +31,7 @@ Fun little drawing side-project
 ```
 -- Windows Systems:
 ```cmd
-	$ cmake -S . -B build -G "MinGW MakeFiles"
+	$ cmake -S . -B build -G "MinGW Makefiles"
 	$ cmake --build build
 ```
 - Running:
