@@ -1,4 +1,4 @@
-lib/** linguist-vendored
-include/raylib.h linguist-vendored
-include/raymath.h linguist-vendored
-include/rlgl.h linguist-vendored
+lib/** linguist-generated
+include/raylib.h linguist-generated
+include/raymath.h linguist-generated
+include/rlgl.h linguist-generated
