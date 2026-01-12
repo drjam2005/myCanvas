@@ -3,7 +3,6 @@
 #include <fstream>
 #include <algorithm>
 #include <cmath>
-#include <sys/select.h>
 
 #include "canvas.h"
 #include "raylib.h"
