@@ -27,6 +27,7 @@ struct Layer {
 		BeginTextureMode(tex);
 		//DrawRectangle(0, 0, tex.texture.width, tex.texture.height, Color{0,0,0,0});
 		ClearBackground(BLANK);
+		opacity = 255;
 
 		if(whiteBackground){
 			BeginTextureMode(tex);

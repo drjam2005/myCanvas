@@ -115,7 +115,7 @@ void Canvas::drawCircle(Vector2 v1) {
 
 void Canvas::drawLine(Vector2 from, Vector2 to) {
     float r = isBrush ? brushSize : eraserSize;
-    float spacing = r * 0.1f; // Smaller spacing makes the line smoother
+    float spacing = r * 0.1f;
 
     Vector2 dir = Vector2Subtract(to, from);
     float dist = Vector2Length(dir);
@@ -127,12 +127,13 @@ void Canvas::drawLine(Vector2 from, Vector2 to) {
         rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
         rlSetBlendMode(BLEND_CUSTOM);
         
-        // Use WHITE or any color with 255 Alpha to trigger the "cutout"
         for (float d = 0; d <= dist; d += spacing) {
             Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
             Vector2 drawPos = { p.x, (float)GetScreenHeight() - p.y };
             DrawCircleV(drawPos, r, WHITE); 
         }
+		DrawLineEx(Vector2{from.x, GetScreenHeight()-from.y}, 
+				Vector2{to.x, GetScreenHeight()-to.y}, r, WHITE);
         
         rlSetBlendMode(BLEND_ALPHA);
     } else {
@@ -141,6 +142,8 @@ void Canvas::drawLine(Vector2 from, Vector2 to) {
             Vector2 drawPos = { p.x, (float)GetScreenHeight() - p.y };
             DrawCircleV(drawPos, r, clr);
         }
+		DrawLineEx(Vector2{from.x, GetScreenHeight()-from.y}, 
+				Vector2{to.x, GetScreenHeight()-to.y}, r, clr);
     }
 
     EndTextureMode();
@@ -408,7 +411,7 @@ void Canvas::Render() {
         Rectangle source = { 0, 0, (float)l.tex.texture.width, (float)l.tex.texture.height };
         Rectangle dest = { canvasPos.x, canvasPos.y, (float)width * scale, (float)height * scale };
         
-        DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, WHITE);
+        DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
         
         EndBlendMode();
     }
