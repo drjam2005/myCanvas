@@ -8,6 +8,7 @@
 
 #include "canvas.h"
 #include "raylib.h"
+#include "raymath.h"
 #include "rlgl.h"
 
 // helper
@@ -25,7 +26,7 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
     : width(width), height(height),
       brushSize(20.0f), eraserSize(20.0f), selectedLayer(0),
       mouseState(IDLE), prevMousePos({-1,-1}), transparency(255),
-      fileName(fileName), clr(BLACK), isBrush(true)
+      fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f), canvasDimensions((Rectangle){0, 0, (float)width, (float)height})
 {
     bool loadedSuccessfully = false;
 
@@ -103,32 +104,42 @@ void Canvas::drawCircle(Vector2 v1) {
     if (!isBrush) {
         rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
         rlSetBlendMode(BLEND_CUSTOM);
-        
-        DrawCircleV({v1.x, GetScreenHeight() - v1.y}, r, WHITE);
-        
+        DrawCircleV(Vector2{v1.x, GetScreenHeight() - v1.y}, r, clr);
         rlSetBlendMode(BLEND_ALPHA); 
     } else {
-        DrawCircleV({v1.x, GetScreenHeight() - v1.y}, r, clr);
+        DrawCircleV(Vector2{v1.x, GetScreenHeight() - v1.y}, r, clr);
     }
-
     EndTextureMode();
 }
 
-void Canvas::drawLine(Vector2 v1, Vector2 v2) {
+
+void Canvas::drawLine(Vector2 from, Vector2 to) {
+    float r = isBrush ? brushSize : eraserSize;
+    float spacing = r * 0.4f;
+
+    Vector2 dir = Vector2Subtract(to, from);
+    float dist = Vector2Length(dir);
+
+    if (dist < spacing)
+        return;
+
+    dir = Vector2Normalize(dir);
+
     BeginTextureMode(layers[selectedLayer].tex);
-    float size = isBrush ? brushSize : eraserSize;
-    Vector2 p1 = {v1.x, GetScreenHeight() - v1.y};
-    Vector2 p2 = {v2.x, GetScreenHeight() - v2.y};
 
     if (!isBrush) {
         rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
         rlSetBlendMode(BLEND_CUSTOM);
-        
-        DrawLineEx(p1, p2, size * 2, BLANK);
-        
-        rlSetBlendMode(BLEND_ALPHA); 
-    } else {
-        DrawLineEx(p1, p2, size * 2, clr);
+    }
+
+    for (float d = 0; d <= dist; d += spacing) {
+        Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
+        Vector2 drawPos = { p.x, GetScreenHeight() - p.y };
+        DrawCircleV(drawPos, r, isBrush ? clr : BLANK);
+    }
+
+    if (!isBrush) {
+        rlSetBlendMode(BLEND_ALPHA);
     }
 
     EndTextureMode();
@@ -139,6 +150,7 @@ void Canvas::Update() {
 	bool ctrl  = IsKeyDown(KEY_LEFT_CONTROL);
 	bool shift = IsKeyDown(KEY_LEFT_SHIFT);
 	bool space = IsKeyDown(KEY_SPACE);
+	bool alt   = IsKeyDown(KEY_LEFT_ALT);
 
 	if (space && !ctrl && !shift){
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -146,6 +158,43 @@ void Canvas::Update() {
 			float xOffset = mousePos.x - prevMousePos.x;
 			canvasPos.y += yOffset;
 			canvasPos.x += xOffset;
+		}
+	}
+
+	if (ctrl && space) {
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			static float zoomAccumulator = 0.0f;
+			if (ctrl && space && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+				Vector2 mousePos = GetMousePosition();
+				float yDelta = mousePos.y - prevMousePos.y;
+
+				zoomAccumulator += yDelta;
+
+				float PIXELS_PER_STEP = 10.0f;
+				float ZOOM_STEP = 1.1f;
+
+				if (fabsf(zoomAccumulator) >= PIXELS_PER_STEP) {
+					float oldScale = scale;
+
+					if (zoomAccumulator < 0)
+						scale *= ZOOM_STEP;
+					else
+						scale /= ZOOM_STEP;
+
+					zoomAccumulator = 0.0f;
+					scale = std::clamp(scale, 0.05f, 20.0f);
+
+					Vector2 before = {
+						(mousePos.x - canvasPos.x) / oldScale,
+						(mousePos.y - canvasPos.y) / oldScale
+					};
+
+					canvasPos.x = mousePos.x - before.x * scale;
+					canvasPos.y = mousePos.y - before.y * scale;
+				}
+
+				prevMousePos = mousePos;
+			}
 		}
 	}
 
@@ -236,9 +285,9 @@ void Canvas::Update() {
 			float diff = 0.25f*(currPos.x - prevMousePos.x);
 			prevMousePos = currPos;
 			if(isBrush)
-				brushSize = fmax(1.0f, fmin(brushSize + diff, 50.0f));
+				brushSize = fmax(0.5f, fmin(brushSize + diff, 50.0f));
 			else
-				eraserSize = fmax(1.0f, fmin(eraserSize + diff, 50.0f));
+				eraserSize = fmax(0.5f, fmin(eraserSize + diff, 50.0f));
 		}
 		return;
 	}
@@ -324,15 +373,24 @@ void Canvas::Update() {
 				redo.pop_back();
 			}
 		}
+		// Inside Update(), replace the mouse button down block:
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			// Transform Screen Space -> Canvas Space
+			Vector2 currentCanvasMouse = {
+				(mousePos.x - canvasPos.x) / scale,
+				(mousePos.y - canvasPos.y) / scale
+			};
+			
+			Vector2 prevCanvasMouse = {
+				(prevMousePos.x - canvasPos.x) / scale,
+				(prevMousePos.y - canvasPos.y) / scale
+			};
+
 			if(mouseState == HELD && prevMousePos.x >= 0) {
-				drawCircle( {mousePos.x - canvasPos.x, mousePos.y - canvasPos.y});
-				drawLine(
-						{prevMousePos.x - canvasPos.x, prevMousePos.y - canvasPos.y} , 
-						{mousePos.x - canvasPos.x, mousePos.y - canvasPos.y}
-						);
+				drawCircle(currentCanvasMouse);
+				drawLine(prevCanvasMouse, currentCanvasMouse);
 			} else {
-				drawCircle( {mousePos.x - canvasPos.x, mousePos.y - canvasPos.y});
+				drawCircle(currentCanvasMouse);
 			}
 			mouseState = HELD;
 		} else if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
@@ -346,9 +404,14 @@ void Canvas::Update() {
 
 void Canvas::Render() {
 	for(auto& l : layers) {
-		BeginBlendMode(l.blendingMode);
-		DrawTextureEx(l.tex.texture, canvasPos, 0.0f, 1.0f, WHITE);
-		EndBlendMode();
+        BeginBlendMode(l.blendingMode);
+        
+        Rectangle source = { 0, 0, (float)l.tex.texture.width, (float)l.tex.texture.height };
+        Rectangle dest = { canvasPos.x, canvasPos.y, (float)width * scale, (float)height * scale };
+        
+        DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, WHITE);
+        
+        EndBlendMode();
     }
 	// draw colors
 	DrawTextContrast("Color Bindings: ", 20, 20, 20, WHITE);
@@ -380,8 +443,8 @@ void Canvas::Render() {
 	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, WHITE);
 	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	DrawCircleLinesV(GetMousePosition(), (isBrush ? brushSize : eraserSize), WHITE);
-	DrawCircleLinesV(GetMousePosition(), (isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
+	DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
+	DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
 	EndBlendMode();
 }
 

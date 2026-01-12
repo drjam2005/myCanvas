@@ -51,10 +51,12 @@ private:
     MOUSE_STATE mouseState;
     Vector2 prevMousePos;
 	Vector2 canvasPos = {0, 0};
+	Rectangle canvasDimensions;
     int width;
     int height;
     float brushSize;
 	float eraserSize;
+	float scale;
 	bool isBrush;
 
     Color clr;
