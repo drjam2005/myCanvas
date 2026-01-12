@@ -22,6 +22,7 @@ int main(int argc, char** argv){
         }
     }
 
+	SetTraceLogLevel(LOG_NONE);
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
 	InitWindow(width, height, "myCanvas");
 	HideCursor();

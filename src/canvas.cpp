@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <iostream>
+#include <vector>
 #include <cstring>
 #include <fstream>
 #include <algorithm>
@@ -39,6 +41,7 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 				if (sscanf(header.c_str(), "%d %d %d", &w, &h, &layerCount) == 3) {
 					this->width = w;
 					this->height = h;
+					SetWindowSize(w, h);
 
 					for (int i = 0; i < layerCount; i++) {
 						std::string meta;
@@ -237,6 +240,7 @@ void Canvas::Update() {
 
 			MemFree(compressedData);
 		}
+		std::cout << "Saved " << fileName << "!" << '\n';
 
 	}
 

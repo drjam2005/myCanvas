@@ -6,7 +6,6 @@
 #include <raylib.h>
 #include <deque>
 #include <unordered_map>
-#include <vector>
 
 enum MOUSE_STATE {
     HELD,
