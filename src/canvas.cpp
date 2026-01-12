@@ -24,7 +24,8 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
     : width(width), height(height),
       brushSize(20.0f), eraserSize(20.0f), selectedLayer(0),
       mouseState(IDLE), prevMousePos({-1,-1}), transparency(255),
-      fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f), canvasDimensions((Rectangle){0, 0, (float)width, (float)height})
+      fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f), canvasDimensions((Rectangle){0, 0, (float)width, (float)height}),
+	  isMirror(false)
 {
 	bool loadedSuccessfully = false;
 
@@ -113,38 +114,42 @@ void Canvas::drawCircle(Vector2 v1) {
 
 
 void Canvas::drawLine(Vector2 from, Vector2 to) {
-    float r = isBrush ? brushSize : eraserSize;
-    float spacing = r * 0.1f;
+    float dist = Vector2Distance(from, to);
+    if (dist <= 0.01f) return;
 
-    Vector2 dir = Vector2Subtract(to, from);
-    float dist = Vector2Length(dir);
-    dir = Vector2Normalize(dir);
+    float speed = dist;
+
+    float maxSize = isBrush ? brushSize : eraserSize;
+    float minSize = maxSize * 0.35f;
+    float maxSpeed = 25.0f;
+
+    float t = speed / maxSpeed;
+    t = Clamp(t, 0.0f, 1.0f);
+
+    t = powf(t, 0.75f);
+
+    float r = Lerp(maxSize, minSize, t);
+
+    float spacing = r * 0.3f;
+    Vector2 dir = Vector2Normalize(Vector2Subtract(to, from));
 
     BeginTextureMode(layers[selectedLayer].tex);
 
     if (!isBrush) {
         rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
         rlSetBlendMode(BLEND_CUSTOM);
-        
-        for (float d = 0; d <= dist; d += spacing) {
-            Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
-            Vector2 drawPos = { p.x, (float)GetScreenHeight() - p.y };
-            DrawCircleV(drawPos, r, WHITE); 
-        }
-		DrawLineEx(Vector2{from.x, GetScreenHeight()-from.y}, 
-				Vector2{to.x, GetScreenHeight()-to.y}, r, WHITE);
-        
-        rlSetBlendMode(BLEND_ALPHA);
-    } else {
-        for (float d = 0; d <= dist; d += spacing) {
-            Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
-            Vector2 drawPos = { p.x, (float)GetScreenHeight() - p.y };
-            DrawCircleV(drawPos, r, clr);
-        }
-		DrawLineEx(Vector2{from.x, GetScreenHeight()-from.y}, 
-				Vector2{to.x, GetScreenHeight()-to.y}, r, clr);
     }
 
+    for (float d = 0.0f; d <= dist; d += spacing) {
+        Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
+        DrawCircleV(
+            { p.x, height - p.y },
+            isBrush ? r : eraserSize,
+            isBrush ? clr : WHITE
+        );
+    }
+
+    rlSetBlendMode(BLEND_ALPHA);
     EndTextureMode();
 }
 
@@ -348,18 +353,25 @@ void Canvas::Update() {
 		return;
 	}
 
-	if(IsKeyPressed(KEY_E)){
-		isBrush = !isBrush;
-	}
-
-	for(auto c : colors){
-		if(IsKeyPressed(c.first)){
-			clr = c.second;
-			clr.a = transparency;
-		}
-	}
-
 	if(!ctrl && !shift && !space){
+		if(IsKeyPressed(KEY_M)){
+			isMirror = !isMirror;
+		}
+		if(IsKeyPressed(KEY_A)){
+			layers[selectedLayer].opacity = (unsigned char)fmax(layers[selectedLayer].opacity - (255.0f/10.0f), 0.0f);
+		}else if (IsKeyPressed(KEY_D)){
+			layers[selectedLayer].opacity = (unsigned char)fmin(layers[selectedLayer].opacity + (255.0f/10.0f), 255.0f);
+		}
+		if(IsKeyPressed(KEY_E)){
+			isBrush = !isBrush;
+		}
+
+		for(auto c : colors){
+			if(IsKeyPressed(c.first)){
+				clr = c.second;
+				clr.a = transparency;
+			}
+		}
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			Image snapshot = LoadImageFromTexture(layers[selectedLayer].tex.texture);
 			undo.push_front({selectedLayer, snapshot});
@@ -374,9 +386,7 @@ void Canvas::Update() {
 				redo.pop_back();
 			}
 		}
-		// Inside Update(), replace the mouse button down block:
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-			// Transform Screen Space -> Canvas Space
 			Vector2 currentCanvasMouse = {
 				(mousePos.x - canvasPos.x) / scale,
 				(mousePos.y - canvasPos.y) / scale
@@ -388,10 +398,12 @@ void Canvas::Update() {
 			};
 
 			if(mouseState == HELD && prevMousePos.x >= 0) {
-				drawCircle(currentCanvasMouse);
-				drawLine(prevCanvasMouse, currentCanvasMouse);
-			} else {
-				drawCircle(currentCanvasMouse);
+				if (isMirror) {
+					Vector2 mPrev = { width - prevCanvasMouse.x, prevCanvasMouse.y };
+					Vector2 mCurr = { width - currentCanvasMouse.x, currentCanvasMouse.y };
+					drawLine(mPrev, mCurr);
+				}else
+					drawLine(prevCanvasMouse, currentCanvasMouse);
 			}
 			mouseState = HELD;
 		} else if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
@@ -407,7 +419,7 @@ void Canvas::Render() {
 	for(auto& l : layers) {
         BeginBlendMode(l.blendingMode);
         
-        Rectangle source = { 0, 0, (float)l.tex.texture.width, (float)l.tex.texture.height };
+        Rectangle source = { 0, 0, (float)l.tex.texture.width * (isMirror ? -1 : 1), (float)l.tex.texture.height };
         Rectangle dest = { canvasPos.x, canvasPos.y, (float)width * scale, (float)height * scale };
         
         DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
@@ -439,7 +451,7 @@ void Canvas::Render() {
 				blend = 'N';
 				break;
 		}
-		DrawTextContrast(TextFormat("[%c] Layer: %d", blend , i), 20, 80+(20*y), 20, i == selectedLayer ? GREEN : WHITE);
+		DrawTextContrast(TextFormat("[%c] Layer: %d [%.2f%]", blend , i, 100.0f*(layers[i].opacity/255.0f)), 20, 80+(20*y), 20, i == selectedLayer ? GREEN : WHITE);
 	}
 	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, WHITE);
 	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);

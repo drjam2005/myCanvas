@@ -16,12 +16,12 @@ enum MOUSE_STATE {
 struct Layer {
     int width;
     int height;
-    char opacity;           
+    unsigned char opacity = 255;
     RenderTexture2D tex;
 	BlendMode blendingMode;
 
     Layer(int w, int h, bool whiteBackground = false)
-        : width(w), height(h), opacity(1.0f), blendingMode(BLEND_ALPHA)
+        : width(w), height(h), opacity(255), blendingMode(BLEND_ALPHA)
     {
         tex = LoadRenderTexture(w, h);
 		BeginTextureMode(tex);
@@ -59,6 +59,7 @@ private:
 	float eraserSize;
 	float scale;
 	bool isBrush;
+	bool isMirror;
 
     Color clr;
 	char transparency;
