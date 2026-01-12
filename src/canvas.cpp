@@ -72,6 +72,8 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 
     if(!loadedSuccessfully) {
         createLayer(true);
+        createLayer(false);
+		selectedLayer = 1;
         SetWindowTitle("myCanvas | [NEW]");
     } else {
         SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
@@ -136,6 +138,17 @@ void Canvas::Update() {
     Vector2 mousePos = GetMousePosition();
 	bool ctrl  = IsKeyDown(KEY_LEFT_CONTROL);
 	bool shift = IsKeyDown(KEY_LEFT_SHIFT);
+	bool space = IsKeyDown(KEY_SPACE);
+
+	if (space && !ctrl && !shift){
+		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+			float yOffset = mousePos.y - prevMousePos.y;
+			float xOffset = mousePos.x - prevMousePos.x;
+			canvasPos.y += yOffset;
+			canvasPos.x += xOffset;
+		}
+	}
+
 	if (IsKeyPressed(KEY_ENTER)) {
 		if (fileName == "") return;
 
@@ -206,8 +219,9 @@ void Canvas::Update() {
 		}
 
 
-		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-			prevMousePos = GetMousePosition();
+		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+			// nothing yet...
+		}
 
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
 			Vector2 currPos = GetMousePosition();
@@ -301,9 +315,15 @@ void Canvas::Update() {
 	}
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         if(mouseState == HELD && prevMousePos.x >= 0) {
-            drawLine(prevMousePos, mousePos);
+            drawLine(
+					{prevMousePos.x - canvasPos.x, prevMousePos.y - canvasPos.y}
+					, 
+					{mousePos.x - canvasPos.x, mousePos.y - canvasPos.y}
+					);
         } else {
-            drawCircle(mousePos);
+            drawCircle(
+					{mousePos.x - canvasPos.x, mousePos.y - canvasPos.y}
+					);
         }
         prevMousePos = mousePos;
         mouseState = HELD;
@@ -318,13 +338,16 @@ void Canvas::Update() {
 		//}
 		UpdateTexture(layers[selectedLayer].tex, layers[selectedLayer].pixels.data());
 	}
-
+   
+	prevMousePos = GetMousePosition();
 }
 
 void Canvas::Render() {
+//RLAPI void DrawTextureEx(Texture2D texture, Vector2 position, float rotation, float scale, Color tint);  // Draw a Texture2D with extended parameters
 	for(auto& l : layers) {
 		BeginBlendMode(l.blendingMode);
-		DrawTexture(l.tex, 0, 0, WHITE);
+		//DrawTexture(l.tex, 0, 0, WHITE);
+		DrawTextureEx(l.tex, canvasPos, 0.0f, 1.0f, WHITE);
 		EndBlendMode();
     }
 	// draw colors

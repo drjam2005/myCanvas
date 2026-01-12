@@ -52,6 +52,7 @@ private:
 
     MOUSE_STATE mouseState;
     Vector2 prevMousePos;
+	Vector2 canvasPos = {0, 0};
     int width;
     int height;
     float brushSize;

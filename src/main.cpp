@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 		canvas.Update();
 
 		BeginDrawing();
-		ClearBackground(WHITE);
+		ClearBackground(BLACK);
 
 		canvas.Render();
 
