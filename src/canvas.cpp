@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <iostream>
 #include <cstring>
 #include <fstream>
 #include <algorithm>
@@ -28,65 +27,66 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
       mouseState(IDLE), prevMousePos({-1,-1}), transparency(255),
       fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f), canvasDimensions((Rectangle){0, 0, (float)width, (float)height})
 {
-    bool loadedSuccessfully = false;
+	bool loadedSuccessfully = false;
 
-    if (fileName != "") {
-        std::ifstream file(fileName, std::ios::binary);
-        if (file.is_open()) {
-            int w, h, layerCount;
-            std::string header;
-            if (std::getline(file, header)) {
-                if (sscanf(header.c_str(), "%d %d %d", &w, &h, &layerCount) == 3) {
-                    this->width = w;
-                    this->height = h;
-                    
-                    for (int i = 0; i < layerCount; i++) {
-                        std::string meta;
-                        if (!std::getline(file, meta)) break;
+	if (fileName != "") {
+		std::ifstream file(fileName, std::ios::binary);
+		if (file.is_open()) {
+			int w, h, layerCount;
+			std::string header;
+			if (!std::getline(file, header)){} else
+			{
+				if (sscanf(header.c_str(), "%d %d %d", &w, &h, &layerCount) == 3) {
+					this->width = w;
+					this->height = h;
 
-                        int opacityInt, blendMode, compressedSize;
-                        sscanf(meta.c_str(), "%d %d %d", &opacityInt, &blendMode, &compressedSize);
+					for (int i = 0; i < layerCount; i++) {
+						std::string meta;
+						if (!std::getline(file, meta)) break;
 
-                        std::vector<unsigned char> compressedBuffer(compressedSize);
-                        file.read((char*)compressedBuffer.data(), compressedSize);
-                        
-                        file.ignore(1, '\n'); 
+						int opacityInt, blendMode, compressedSize;
+						sscanf(meta.c_str(), "%d %d %d", &opacityInt, &blendMode, &compressedSize);
 
-                        int decompressedSize = 0;
-                        unsigned char* decompressed = DecompressData(compressedBuffer.data(), compressedSize, &decompressedSize);
+						std::vector<unsigned char> compressedBuffer(compressedSize);
+						file.read((char*)compressedBuffer.data(), compressedSize);
 
-                        if (decompressed) {
-                            createLayer(false);
-                            Layer& l = layers.back();
-                            l.opacity = (unsigned char)opacityInt;
-                            l.blendingMode = (BlendMode)blendMode;
+						file.ignore(1, '\n'); 
 
-                            UpdateTexture(l.tex.texture, decompressed);
-                            MemFree(decompressed);
-                        }
-                    }
-                    loadedSuccessfully = true;
-                }
-            }
-        }
-    }
+						int decompressedSize = 0;
+						unsigned char* decompressed = DecompressData(compressedBuffer.data(), compressedSize, &decompressedSize);
 
-    if (!loadedSuccessfully) {
-        layers.clear(); 
-        createLayer(true);  
-        createLayer(false); 
-        selectedLayer = 1;
-        SetWindowTitle("myCanvas | [NEW]");
-    } else {
-        selectedLayer = layers.size() - 1;
-        SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
-    }
+						if (decompressed) {
+							createLayer(false);
+							Layer& l = layers.back();
+							l.opacity = (unsigned char)opacityInt;
+							l.blendingMode = (BlendMode)blendMode;
 
-    colors['1'] = BLACK;
-    colors['2'] = RED;
-    colors['3'] = GREEN;
-    colors['4'] = BLUE;
-    colors['5'] = ORANGE;
+							UpdateTexture(l.tex.texture, decompressed);
+							MemFree(decompressed);
+						}
+					}
+					loadedSuccessfully = true;
+				}
+			}
+		}
+	}
+
+	if (!loadedSuccessfully) {
+		layers.clear(); 
+		createLayer(true);  
+		createLayer(false); 
+		selectedLayer = 1;
+		SetWindowTitle("myCanvas | [NEW]");
+	} else {
+		selectedLayer = layers.size() - 1;
+		SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
+	}
+
+	colors['1'] = BLACK;
+	colors['2'] = RED;
+	colors['3'] = GREEN;
+	colors['4'] = BLUE;
+	colors['5'] = ORANGE;
 }
 
 void Canvas::createLayer(bool whiteBackground) {
@@ -104,7 +104,7 @@ void Canvas::drawCircle(Vector2 v1) {
     if (!isBrush) {
         rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
         rlSetBlendMode(BLEND_CUSTOM);
-        DrawCircleV(Vector2{v1.x, GetScreenHeight() - v1.y}, r, clr);
+        DrawCircleV(Vector2{v1.x, GetScreenHeight() - v1.y}, r, WHITE);
         rlSetBlendMode(BLEND_ALPHA); 
     } else {
         DrawCircleV(Vector2{v1.x, GetScreenHeight() - v1.y}, r, clr);
@@ -115,14 +115,10 @@ void Canvas::drawCircle(Vector2 v1) {
 
 void Canvas::drawLine(Vector2 from, Vector2 to) {
     float r = isBrush ? brushSize : eraserSize;
-    float spacing = r * 0.4f;
+    float spacing = r * 0.1f; // Smaller spacing makes the line smoother
 
     Vector2 dir = Vector2Subtract(to, from);
     float dist = Vector2Length(dir);
-
-    if (dist < spacing)
-        return;
-
     dir = Vector2Normalize(dir);
 
     BeginTextureMode(layers[selectedLayer].tex);
@@ -130,16 +126,21 @@ void Canvas::drawLine(Vector2 from, Vector2 to) {
     if (!isBrush) {
         rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
         rlSetBlendMode(BLEND_CUSTOM);
-    }
-
-    for (float d = 0; d <= dist; d += spacing) {
-        Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
-        Vector2 drawPos = { p.x, GetScreenHeight() - p.y };
-        DrawCircleV(drawPos, r, isBrush ? clr : BLANK);
-    }
-
-    if (!isBrush) {
+        
+        // Use WHITE or any color with 255 Alpha to trigger the "cutout"
+        for (float d = 0; d <= dist; d += spacing) {
+            Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
+            Vector2 drawPos = { p.x, (float)GetScreenHeight() - p.y };
+            DrawCircleV(drawPos, r, WHITE); 
+        }
+        
         rlSetBlendMode(BLEND_ALPHA);
+    } else {
+        for (float d = 0; d <= dist; d += spacing) {
+            Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
+            Vector2 drawPos = { p.x, (float)GetScreenHeight() - p.y };
+            DrawCircleV(drawPos, r, clr);
+        }
     }
 
     EndTextureMode();
@@ -216,8 +217,6 @@ void Canvas::Update() {
 				CompressData((unsigned char*)(LoadImageColors(img)),
 						(img.width * img.height) * sizeof(Color),
 						&compressedSize);
-
-			std::cout << img.width << " : " << img.height << '\n';
 
 			file << (int)opacity << " "
 				<< blendMode << " "
