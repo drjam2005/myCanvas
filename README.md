@@ -27,7 +27,13 @@ Fun little drawing side-project
 	$ ./myCanvas
 
 	// running with a file to load/save
-	$ ./myCanvas fileName
+	$ ./myCanvas -f fileName
+
+	// running with window dimensoins (defaults: width = 800, height = 600)
+	$ ./myCanvas -w 1920 -h 1080
+
+	// running with window dimensoins and file to load/save
+	$ ./myCanvas -w 1920 -h 1080 -f fileName
 ```
 -- Windows Systems:
 ```cmd
@@ -40,7 +46,13 @@ Fun little drawing side-project
 	$ myCanvas.exe
 
 	// running with a file to load/save
-	$ myCanvas.exe fileName
+	$ myCanvas.exe -f fileName
+
+	// running with window dimensoins (defaults: width = 800, height = 600)
+	$ myCanvas.exe -w 1920 -h 1080
+
+	// running with window dimensoins and file to load/save
+	$ myCanvas.exe -w 1920 -h 1080 -f fileName
 ```
 
 ## BINDINGS

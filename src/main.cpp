@@ -1,18 +1,33 @@
 #include <raylib.h>
+#include <cstring>
 #include <canvas.h>
 
-#define WIDTH 800
-#define HEIGHT 600
-
 int main(int argc, char** argv){
+	std::string fileName = "";
+    int width = 800;
+    int height = 600;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
+            fileName = argv[i + 1];
+            i++;
+        } else if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
+            width = atoi(argv[i + 1]);
+            i++;
+        } else if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
+            height = atoi(argv[i + 1]);
+            i++;
+        } else {
+            printf("Unknown argument: %s\n", argv[i]);
+        }
+    }
+
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
-	InitWindow(WIDTH, HEIGHT, "myCanvas");
+	InitWindow(width, height, "myCanvas");
 	HideCursor();
 
-	Canvas canvas; std::string fileName = "";
-	if(argc == 2)
-		fileName = argv[1];
-	canvas = Canvas(WIDTH, HEIGHT, 16, fileName);
+	Canvas canvas;
+	canvas = Canvas(width, height, 16, fileName);
 	
 	while(!WindowShouldClose()){
 		canvas.Update();

@@ -120,13 +120,15 @@ void Canvas::drawLine(Vector2 from, Vector2 to) {
     float speed = dist;
 
     float maxSize = isBrush ? brushSize : eraserSize;
-    float minSize = maxSize * 0.35f;
+    float minSize = maxSize * 0.5f;
     float maxSpeed = 25.0f;
 
     float t = speed / maxSpeed;
+	if(t >= 10)
+		t = powf(t, 0.25f);
+
     t = Clamp(t, 0.0f, 1.0f);
 
-    t = powf(t, 0.75f);
 
     float r = Lerp(maxSize, minSize, t);
 
