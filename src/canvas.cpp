@@ -1,92 +1,92 @@
+#include <cstdio>
 #include <iostream>
 #include <cstring>
 #include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <sys/select.h>
 
 #include "canvas.h"
 #include "raylib.h"
+#include "rlgl.h"
+
+// helper
+void DrawTextContrast(const char *text, int posX, int posY, int fontSize, Color color) {
+	Color darkDARKGRAY{ 40, 40, 40, 255 };
+    DrawText(text, posX + 1, posY + 1, fontSize, darkDARKGRAY);
+    DrawText(text, posX - 1, posY - 1, fontSize, darkDARKGRAY);
+    DrawText(text, posX + 1, posY - 1, fontSize, darkDARKGRAY);
+    DrawText(text, posX - 1, posY + 1, fontSize, darkDARKGRAY);
+
+    DrawText(text, posX, posY, fontSize, color);
+}
 
 Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
     : width(width), height(height),
       brushSize(20.0f), eraserSize(20.0f), selectedLayer(0),
       mouseState(IDLE), prevMousePos({-1,-1}), transparency(255),
-      fileName(fileName), clr(BLACK)
+      fileName(fileName), clr(BLACK), isBrush(true)
 {
-    layers.reserve(maxLayers);
     bool loadedSuccessfully = false;
 
-	if(fileName != ""){
-		std::ifstream file(fileName, std::ios::binary);
-		if(file.is_open()) {
-			int w, h, layerCount;
-			std::string header;
-			std::getline(file, header);
-			sscanf(header.c_str(), "%d %d %d", &w, &h, &layerCount);
+    if (fileName != "") {
+        std::ifstream file(fileName, std::ios::binary);
+        if (file.is_open()) {
+            int w, h, layerCount;
+            std::string header;
+            if (std::getline(file, header)) {
+                if (sscanf(header.c_str(), "%d %d %d", &w, &h, &layerCount) == 3) {
+                    this->width = w;
+                    this->height = h;
+                    
+                    for (int i = 0; i < layerCount; i++) {
+                        std::string meta;
+                        if (!std::getline(file, meta)) break;
 
-			width  = w;
-			height = h;
-			SetWindowSize(w, h);
+                        int opacityInt, blendMode, compressedSize;
+                        sscanf(meta.c_str(), "%d %d %d", &opacityInt, &blendMode, &compressedSize);
 
-			layers.clear();
+                        std::vector<unsigned char> compressedBuffer(compressedSize);
+                        file.read((char*)compressedBuffer.data(), compressedSize);
+                        
+                        file.ignore(1, '\n'); 
 
-			for (int i = 0; i < layerCount; i++) {
-				std::string meta;
-				std::getline(file, meta);
+                        int decompressedSize = 0;
+                        unsigned char* decompressed = DecompressData(compressedBuffer.data(), compressedSize, &decompressedSize);
 
-				int opacityInt, blendMode, compressedSize;
-				sscanf(meta.c_str(), "%d %d %d",
-						&opacityInt,
-						&blendMode,
-						&compressedSize);
+                        if (decompressed) {
+                            createLayer(false);
+                            Layer& l = layers.back();
+                            l.opacity = (unsigned char)opacityInt;
+                            l.blendingMode = (BlendMode)blendMode;
 
-				std::vector<unsigned char> compressedBuffer(compressedSize);
-				file.read((char*)compressedBuffer.data(), compressedSize);
+                            UpdateTexture(l.tex.texture, decompressed);
+                            MemFree(decompressed);
+                        }
+                    }
+                    loadedSuccessfully = true;
+                }
+            }
+        }
+    }
 
-				file.ignore(1, '\n');
-
-				int decompressedSize = 0;
-				unsigned char* decompressed =
-					DecompressData(compressedBuffer.data(),
-							compressedSize,
-							&decompressedSize);
-
-				createLayer(false);
-				Layer& l = layers.back();
-
-				l.opacity = (unsigned char)opacityInt;
-				l.blendingMode = (BlendMode)blendMode;
-
-				size_t maxBytes = l.pixels.size() * sizeof(Color);
-				memcpy(l.pixels.data(),
-						decompressed,
-						std::min((size_t)decompressedSize, maxBytes));
-
-				UpdateTexture(l.tex, l.pixels.data());
-				MemFree(decompressed);
-			}
-			loadedSuccessfully = true;
-		}
-
-	}
-
-    if(!loadedSuccessfully) {
-        createLayer(true);
-        createLayer(false);
-		selectedLayer = 1;
+    if (!loadedSuccessfully) {
+        layers.clear(); 
+        createLayer(true);  
+        createLayer(false); 
+        selectedLayer = 1;
         SetWindowTitle("myCanvas | [NEW]");
     } else {
+        selectedLayer = layers.size() - 1;
         SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
     }
 
-	colors['1'] = BLACK;
-	colors['2'] = RED;
-	colors['3'] = GREEN;
-	colors['4'] = BLUE;
-	colors['5'] = ORANGE;
-    isBrush = true;
+    colors['1'] = BLACK;
+    colors['2'] = RED;
+    colors['3'] = GREEN;
+    colors['4'] = BLUE;
+    colors['5'] = ORANGE;
 }
-
 
 void Canvas::createLayer(bool whiteBackground) {
     layers.emplace_back(width, height, whiteBackground);
@@ -97,41 +97,41 @@ Layer& Canvas::getCurrentLayer() {
 }
 
 void Canvas::drawCircle(Vector2 v1) {
-    Layer& layer = getCurrentLayer();
-	float r = isBrush ? brushSize : eraserSize;
-    float r2 = r*r;
-
-    int minX = std::max(0, (int)(v1.x - r));
-    int maxX = std::min(layer.width - 1, (int)(v1.x + r));
-    int minY = std::max(0, (int)(v1.y - r));
-    int maxY = std::min(layer.height - 1, (int)(v1.y + r));
-
-    for(int y = minY; y <= maxY; ++y) {
-        for(int x = minX; x <= maxX; ++x) {
-            float dx = x - v1.x;
-            float dy = y - v1.y;
-            if(dx*dx + dy*dy <= r2) {
-                layer.pixels[y*layer.width + x] = clr;
-            }
-        }
+    float r = isBrush ? brushSize : eraserSize;
+    BeginTextureMode(layers[selectedLayer].tex);
+    
+    if (!isBrush) {
+        rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
+        rlSetBlendMode(BLEND_CUSTOM);
+        
+        DrawCircleV({v1.x, GetScreenHeight() - v1.y}, r, WHITE);
+        
+        rlSetBlendMode(BLEND_ALPHA); 
+    } else {
+        DrawCircleV({v1.x, GetScreenHeight() - v1.y}, r, clr);
     }
+
+    EndTextureMode();
 }
 
 void Canvas::drawLine(Vector2 v1, Vector2 v2) {
-    float dx = v2.x - v1.x;
-    float dy = v2.y - v1.y;
-    float len = sqrtf(dx*dx + dy*dy);
-    if(len == 0) return;
+    BeginTextureMode(layers[selectedLayer].tex);
+    float size = isBrush ? brushSize : eraserSize;
+    Vector2 p1 = {v1.x, GetScreenHeight() - v1.y};
+    Vector2 p2 = {v2.x, GetScreenHeight() - v2.y};
 
-    float stepX = dx / len;
-    float stepY = dy / len;
-
-    Vector2 curr = v1;
-    for(int i = 0; i <= (int)len; ++i) {
-        drawCircle(curr);
-        curr.x += stepX;
-        curr.y += stepY;
+    if (!isBrush) {
+        rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
+        rlSetBlendMode(BLEND_CUSTOM);
+        
+        DrawLineEx(p1, p2, size * 2, BLANK);
+        
+        rlSetBlendMode(BLEND_ALPHA); 
+    } else {
+        DrawLineEx(p1, p2, size * 2, clr);
     }
+
+    EndTextureMode();
 }
 
 void Canvas::Update() {
@@ -162,10 +162,13 @@ void Canvas::Update() {
 			unsigned char opacity = (unsigned char)l.opacity;
 			int blendMode = (int)l.blendingMode;
 
+			Image img = LoadImageFromTexture(l.tex.texture);
 			unsigned char* compressedData =
-				CompressData((unsigned char*)l.pixels.data(),
-						l.pixels.size() * sizeof(Color),
+				CompressData((unsigned char*)(LoadImageColors(img)),
+						(img.width * img.height) * sizeof(Color),
 						&compressedSize);
+
+			std::cout << img.width << " : " << img.height << '\n';
 
 			file << (int)opacity << " "
 				<< blendMode << " "
@@ -181,46 +184,51 @@ void Canvas::Update() {
 	}
 
 	if (ctrl && shift) {
-		size_t otherLayer = selectedLayer;
-		bool isSwap = false;
-
-		if (IsKeyPressed(KEY_W)) {
-			otherLayer = (selectedLayer + 1) % layers.size();
-			isSwap = true;
-		} 
-		else if (IsKeyPressed(KEY_S)) {
-			otherLayer = (selectedLayer == 0)
-				? layers.size() - 1
-				: selectedLayer - 1;
-			isSwap = true;
-		}
-		if (isSwap) {
-			std::swap(layers[selectedLayer].pixels,
-					  layers[otherLayer].pixels);
-			selectedLayer = otherLayer;
-
-			UpdateTexture(layers[selectedLayer].tex,
-						  layers[selectedLayer].pixels.data());
-			UpdateTexture(layers[otherLayer].tex,
-						  layers[otherLayer].pixels.data());
-		}
-	}
-	if(shift){
-		if(IsKeyPressed(KEY_Z)){
-			if (!redo.empty()) {
-				size_t layerIdx = redo.front().first;
+		// swapping
+		{
+			size_t otherLayer = selectedLayer;
+			bool isSwap = false;
+			if (IsKeyPressed(KEY_W)) {
+				otherLayer = (selectedLayer + 1) % layers.size();
+				isSwap = true;
+			} 
+			else if (IsKeyPressed(KEY_S)) {
+				otherLayer = (selectedLayer == 0)
+					? layers.size() - 1
+					: selectedLayer - 1;
+				isSwap = true;
+			}
+			if (isSwap) {
+				std::swap(layers[selectedLayer].tex, layers[otherLayer].tex);
 				
-				undo.push_front({layerIdx, layers[layerIdx].pixels});
-				layers[layerIdx].pixels = redo.front().second;
-				redo.pop_front();
+				std::swap(layers[selectedLayer].blendingMode, layers[otherLayer].blendingMode);
+				std::swap(layers[selectedLayer].opacity, layers[otherLayer].opacity);
+				
+				std::swap(layers[selectedLayer].width, layers[otherLayer].width);
+				std::swap(layers[selectedLayer].height, layers[otherLayer].height);
 
-				UpdateTexture(layers[layerIdx].tex, layers[layerIdx].pixels.data());
+				selectedLayer = otherLayer;
 			}
 		}
+		if (IsKeyPressed(KEY_Z)) {
+			if (!redo.empty()) {
+				size_t layerIdx = redo.front().first;
+				Image redoImage = redo.front().second;
 
+				Image current = LoadImageFromTexture(layers[layerIdx].tex.texture);
+				undo.push_front({layerIdx, current});
 
+				UpdateTexture(layers[layerIdx].tex.texture, redoImage.data);
+
+				UnloadImage(redoImage);
+				redo.pop_front();
+			}
+		}
+	}
+	if(shift && !ctrl && !space){
 		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
 			// nothing yet...
+			prevMousePos = GetMousePosition();
 		}
 
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -235,7 +243,7 @@ void Canvas::Update() {
 		return;
 	}
 
-	if(IsKeyDown(KEY_LEFT_CONTROL)){
+	if(ctrl && !shift){
 		if(IsKeyPressed(KEY_E)){
 			createLayer(false);
 			return;
@@ -251,16 +259,18 @@ void Canvas::Update() {
 			}
 		}
 		if (IsKeyPressed(KEY_Z)) {
-				if (!undo.empty()) {
-					size_t layerIdx = undo.front().first;
-					
-					redo.push_front({layerIdx, layers[layerIdx].pixels});
+			if (!undo.empty()) {
+				size_t layerIdx = undo.front().first;
+				Image prevImage = undo.front().second;
 
-					layers[layerIdx].pixels = undo.front().second;
-					undo.pop_front();
+				Image current = LoadImageFromTexture(layers[layerIdx].tex.texture);
+				redo.push_front({layerIdx, current});
 
-					UpdateTexture(layers[layerIdx].tex, layers[layerIdx].pixels.data());
-					mouseState = IDLE;
+				UpdateTexture(layers[layerIdx].tex.texture, prevImage.data);
+
+				UnloadImage(prevImage); 
+				undo.pop_front();
+				mouseState = IDLE;
 			}
 			return;
 		}
@@ -289,16 +299,9 @@ void Canvas::Update() {
 	}
 
 	if(IsKeyPressed(KEY_E)){
-		if(clr.a != 0){
-			clr.a = 0;
-			isBrush = false;
-		}else{
-			clr.a = transparency;
-			isBrush = true;
-		}
+		isBrush = !isBrush;
 	}
 
-	// colors
 	for(auto c : colors){
 		if(IsKeyPressed(c.first)){
 			clr = c.second;
@@ -306,59 +309,56 @@ void Canvas::Update() {
 		}
 	}
 
-	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-		undo.push_front({selectedLayer, getCurrentLayer().pixels});
-		if(undo.size() > 10)
-			undo.pop_back();
-		while(!redo.empty())
-			redo.pop_back();
-	}
-    if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        if(mouseState == HELD && prevMousePos.x >= 0) {
-            drawLine(
-					{prevMousePos.x - canvasPos.x, prevMousePos.y - canvasPos.y}
-					, 
-					{mousePos.x - canvasPos.x, mousePos.y - canvasPos.y}
-					);
-        } else {
-            drawCircle(
-					{mousePos.x - canvasPos.x, mousePos.y - canvasPos.y}
-					);
-        }
-        prevMousePos = mousePos;
-        mouseState = HELD;
-    } else if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-        mouseState = IDLE;
-        prevMousePos = {-1,-1};
-    }
+	if(!ctrl && !shift && !space){
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+			Image snapshot = LoadImageFromTexture(layers[selectedLayer].tex.texture);
+			undo.push_front({selectedLayer, snapshot});
 
-	if(mouseState != IDLE){
-		//for(auto& l : layers) {
-		//	UpdateTexture(l.tex, l.pixels.data());
-		//}
-		UpdateTexture(layers[selectedLayer].tex, layers[selectedLayer].pixels.data());
+			if (undo.size() > 10) {
+				UnloadImage(undo.back().second);
+				undo.pop_back();
+			}
+			
+			while (!redo.empty()) {
+				UnloadImage(redo.back().second);
+				redo.pop_back();
+			}
+		}
+		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			if(mouseState == HELD && prevMousePos.x >= 0) {
+				drawCircle( {mousePos.x - canvasPos.x, mousePos.y - canvasPos.y});
+				drawLine(
+						{prevMousePos.x - canvasPos.x, prevMousePos.y - canvasPos.y} , 
+						{mousePos.x - canvasPos.x, mousePos.y - canvasPos.y}
+						);
+			} else {
+				drawCircle( {mousePos.x - canvasPos.x, mousePos.y - canvasPos.y});
+			}
+			mouseState = HELD;
+		} else if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+			mouseState = IDLE;
+			prevMousePos = {-1,-1};
+		}
+	   
 	}
-   
-	prevMousePos = GetMousePosition();
+	prevMousePos = mousePos;
 }
 
 void Canvas::Render() {
-//RLAPI void DrawTextureEx(Texture2D texture, Vector2 position, float rotation, float scale, Color tint);  // Draw a Texture2D with extended parameters
 	for(auto& l : layers) {
 		BeginBlendMode(l.blendingMode);
-		//DrawTexture(l.tex, 0, 0, WHITE);
-		DrawTextureEx(l.tex, canvasPos, 0.0f, 1.0f, WHITE);
+		DrawTextureEx(l.tex.texture, canvasPos, 0.0f, 1.0f, WHITE);
 		EndBlendMode();
     }
 	// draw colors
-	DrawText("Color Bindings: ", 20, 20, 20, BLACK);
+	DrawTextContrast("Color Bindings: ", 20, 20, 20, WHITE);
 	size_t x = colors.size();
 	for(auto c : colors){
-		DrawText(TextFormat("%d", c.first-'0'), 20+(20*x), 40, 20, c.second);
+		DrawTextContrast(TextFormat("%d", c.first-'0'), 20+(20*x), 40, 20, c.second);
 		if(c.second.r == clr.r &&
 		   c.second.g == clr.g &&
 		   c.second.b == clr.b)
-			DrawText("_", 20+(20*x), 43, 20, BLACK);
+			DrawTextContrast("_", 20+(20*x), 45, 20, BLACK);
 		x--;
 	}
 	
@@ -375,12 +375,13 @@ void Canvas::Render() {
 				blend = 'N';
 				break;
 		}
-		DrawText(TextFormat("[%c] Layer: %d", blend , i), 20, 80+(20*y), 20, i == selectedLayer ? GREEN : BLACK);
+		DrawTextContrast(TextFormat("[%c] Layer: %d", blend , i), 20, 80+(20*y), 20, i == selectedLayer ? GREEN : WHITE);
 	}
-	DrawText((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, BLACK);
-	DrawText(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, BLACK);
+	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, WHITE);
+	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	DrawCircleLinesV(GetMousePosition(), isBrush ? brushSize : eraserSize, GRAY);
+	DrawCircleLinesV(GetMousePosition(), (isBrush ? brushSize : eraserSize), WHITE);
+	DrawCircleLinesV(GetMousePosition(), (isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
 	EndBlendMode();
 }
 

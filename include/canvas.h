@@ -17,37 +17,35 @@ struct Layer {
     int width;
     int height;
     char opacity;           
-    std::vector<Color> pixels;
-    Texture2D tex;
+    RenderTexture2D tex;
 	BlendMode blendingMode;
 
     Layer(int w, int h, bool whiteBackground = false)
-        : width(w), height(h), opacity(1.0f), pixels(w*h), blendingMode(BLEND_ALPHA)
+        : width(w), height(h), opacity(1.0f), blendingMode(BLEND_ALPHA)
     {
-        Color fill = whiteBackground ? Color{255,255,255,255} : Color{0,0,0,0};
-        std::fill(pixels.begin(), pixels.end(), fill);
+        tex = LoadRenderTexture(w, h);
+		BeginTextureMode(tex);
+		//DrawRectangle(0, 0, tex.texture.width, tex.texture.height, Color{0,0,0,0});
+		ClearBackground(BLANK);
 
-        Image tempImg = {};
-        tempImg.width = w;
-        tempImg.height = h;
-        tempImg.mipmaps = 1;
-        tempImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-        tempImg.data = pixels.data();
-
-        tex = LoadTextureFromImage(tempImg);
+		if(whiteBackground){
+			BeginTextureMode(tex);
+			DrawRectangle(0, 0, tex.texture.width, tex.texture.height, WHITE);
+		}
+		EndTextureMode();
     }
 
     ~Layer() { 
-		UnloadTexture(tex);
+		UnloadRenderTexture(tex);
 	}
 };
 
 class Canvas {
 private:
 	std::string fileName;
-    std::vector<Layer> layers;
-	std::deque<std::pair<size_t, std::vector<Color>>> undo;
-	std::deque<std::pair<size_t, std::vector<Color>>> redo;
+    std::deque<Layer> layers;
+	std::deque<std::pair<size_t, Image>> undo;
+	std::deque<std::pair<size_t, Image>> redo;
 	std::unordered_map<char, Color> colors;
 
     MOUSE_STATE mouseState;
