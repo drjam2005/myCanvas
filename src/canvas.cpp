@@ -85,6 +85,37 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 		SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 	}
 
+	// set window stuff hmhmhmm
+	int monitor = GetCurrentMonitor();
+	int monitorWidth  = GetMonitorWidth(monitor);
+	int monitorHeight = GetMonitorHeight(monitor);
+
+	int windowWidth  = monitorWidth * 0.8f;
+	int windowHeight = monitorHeight * 0.8f;
+
+	SetWindowSize(windowWidth, windowHeight);
+	SetWindowPosition(
+		(monitorWidth  - windowWidth)  / 2,
+		(monitorHeight - windowHeight) / 2
+	);
+
+	if(width > height)
+		scale = 0.9f*((float)GetScreenHeight()/height);
+	else
+		scale = 0.9f*((float)GetScreenWidth()/width);
+
+	if(width > 0.9f*GetScreenWidth())
+		scale = 0.9f*((float)GetScreenWidth()/width);
+	else if(height > 0.9f*GetScreenHeight())
+		scale = 0.9f*((float)GetScreenHeight()/height);
+
+	canvasPos = {
+		(GetScreenWidth()  - (scale*width))  * 0.5f,
+		(GetScreenHeight() - (scale*height)) * 0.5f
+	};
+
+
+
 	colors['1'] = BLACK;
 	colors['2'] = RED;
 	colors['3'] = GREEN;
