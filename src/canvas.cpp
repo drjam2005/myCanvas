@@ -148,27 +148,6 @@ void Canvas::drawCircle(Vector2 v1) {
 
 
 void Canvas::drawLine(Vector2 from, Vector2 to) {
-    float dist = Vector2Distance(from, to);
-    if (dist <= 0.01f) return;
-
-    float speed = dist;
-
-    float maxSize = isBrush ? brushSize : eraserSize;
-    float minSize = maxSize * 0.5f;
-    float maxSpeed = 25.0f;
-
-    float t = speed / maxSpeed;
-	if(t >= 10)
-		t = powf(t, 0.25f);
-
-    t = Clamp(t, 0.0f, 1.0f);
-
-
-    float r = Lerp(maxSize, minSize, t);
-
-    float spacing = r * 0.3f;
-    Vector2 dir = Vector2Normalize(Vector2Subtract(to, from));
-
     BeginTextureMode(layers[selectedLayer].tex);
 
     if (!isBrush) {
@@ -176,16 +155,13 @@ void Canvas::drawLine(Vector2 from, Vector2 to) {
         rlSetBlendMode(BLEND_CUSTOM);
     }
 
-    for (float d = 0.0f; d <= dist; d += spacing) {
-        Vector2 p = Vector2Add(from, Vector2Scale(dir, d));
-        DrawCircleV(
-            { p.x, height - p.y },
-            isBrush ? r : eraserSize,
-            isBrush ? clr : WHITE
-        );
-    }
+	DrawCircleV({from.x, height-from.y}, (isBrush ? brushSize : eraserSize), isBrush ? clr : WHITE);
+	DrawLineEx({from.x, height-from.y}, {to.x, height-to.y}, 2*(isBrush ? brushSize : eraserSize), isBrush ? clr : WHITE);
+	DrawCircleV({to.x, height-to.y}, (isBrush ? brushSize : eraserSize), isBrush ? clr : WHITE);
 
-    rlSetBlendMode(BLEND_ALPHA);
+	if(!isBrush){
+		rlSetBlendMode(BLEND_ALPHA);
+	}
     EndTextureMode();
 }
 
