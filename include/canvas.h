@@ -3,9 +3,9 @@
 #define CANVAS_H
 
 #include <string>
-#include <raylib.h>
 #include <deque>
 #include <unordered_map>
+#include "raylib.h"
 
 enum MOUSE_STATE {
     HELD,
@@ -46,12 +46,13 @@ private:
     std::deque<Layer> layers;
 	std::deque<std::pair<size_t, Image>> undo;
 	std::deque<std::pair<size_t, Image>> redo;
-	std::unordered_map<char, Color> colors;
+	std::deque<Color> colorQueue;
 
     MOUSE_STATE mouseState;
     Vector2 prevMousePos;
 	Vector2 canvasPos = {0, 0};
-	Rectangle canvasDimensions;
+	Rectangle colorPickerRec;
+	Rectangle colorPickerBounds;
     int width;
     int height;
     float brushSize;
@@ -59,6 +60,7 @@ private:
 	float scale;
 	bool isBrush;
 	bool isMirror;
+	bool isColorPicking;
 
     Color clr;
 	char transparency;

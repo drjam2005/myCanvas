@@ -7,11 +7,13 @@
 #include <cmath>
 
 #include "canvas.h"
-#include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
 
-// helper
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+
+// helpers
 void DrawTextContrast(const char *text, int posX, int posY, int fontSize, Color color) {
 	Color darkDARKGRAY{ 40, 40, 40, 255 };
     DrawText(text, posX + 1, posY + 1, fontSize, darkDARKGRAY);
@@ -22,12 +24,24 @@ void DrawTextContrast(const char *text, int posX, int posY, int fontSize, Color 
     DrawText(text, posX, posY, fontSize, color);
 }
 
+bool contains(const std::deque<Color>& d, Color value) {
+    for (Color v : d) {
+        if (
+			v.r == value.r && 
+			v.g == value.g && 
+			v.b == value.b
+				)
+            return true;
+    }
+    return false;
+}
+
 Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
     : width(width), height(height),
       brushSize(20.0f), eraserSize(20.0f), selectedLayer(0),
       mouseState(IDLE), prevMousePos({-1,-1}), transparency(255),
-      fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f), canvasDimensions((Rectangle){0, 0, (float)width, (float)height}),
-	  isMirror(false)
+      fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f),
+	  isMirror(false), isColorPicking(false)
 {
 	bool loadedSuccessfully = false;
 
@@ -114,13 +128,7 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 		(GetScreenHeight() - (scale*height)) * 0.5f
 	};
 
-
-
-	colors['1'] = BLACK;
-	colors['2'] = RED;
-	colors['3'] = GREEN;
-	colors['4'] = BLUE;
-	colors['5'] = ORANGE;
+	colorQueue.push_front(BLACK);
 }
 
 void Canvas::createLayer(bool whiteBackground) {
@@ -167,6 +175,17 @@ void Canvas::drawLine(Vector2 from, Vector2 to) {
 
 void Canvas::Update() {
     Vector2 mousePos = GetMousePosition();
+
+	float smaller = fmax(500.0f,fmin(GetScreenWidth(), GetScreenHeight()));
+	colorPickerRec = {
+		GetScreenWidth() - (smaller*0.3f),
+		(smaller*0.1f),
+		smaller*0.2f,
+		smaller*0.2f
+	};
+	colorPickerBounds = colorPickerRec;
+	colorPickerBounds.width += 35;
+
 	bool ctrl  = IsKeyDown(KEY_LEFT_CONTROL);
 	bool shift = IsKeyDown(KEY_LEFT_SHIFT);
 	bool space = IsKeyDown(KEY_SPACE);
@@ -379,13 +398,40 @@ void Canvas::Update() {
 			isBrush = !isBrush;
 		}
 
-		for(auto c : colors){
-			if(IsKeyPressed(c.first)){
-				clr = c.second;
-				clr.a = transparency;
+		for(int i = 0; i < 10; ++i){
+			if(IsKeyPressed(KEY_ONE+i) && i+1 <= colorQueue.size()){
+				clr = colorQueue[i];
 			}
 		}
+
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+			if(CheckCollisionPointRec(mousePos, colorPickerBounds)){
+				isColorPicking = true;
+				return;
+			}
+			float cWidth = colorPickerRec.width / 6.0f;
+			float padding = cWidth / 5.0f;
+			size_t cols = 5;
+			for (size_t i = 0; i < colorQueue.size(); ++i) {
+				Color c = colorQueue[i];
+				size_t row = i / cols;
+				size_t col = i % cols;
+
+				float xOffset = col * (cWidth + padding);
+				float yOffset = row * (cWidth + padding);
+
+				Rectangle bounds = {
+					colorPickerRec.x + xOffset,
+					colorPickerRec.y + colorPickerRec.height + yOffset + padding,
+					cWidth,
+					cWidth,
+				};
+				if(CheckCollisionPointRec(mousePos, bounds)){
+					clr = c;
+				}
+
+			}
+
 			Image snapshot = LoadImageFromTexture(layers[selectedLayer].tex.texture);
 			undo.push_front({selectedLayer, snapshot});
 
@@ -400,6 +446,8 @@ void Canvas::Update() {
 			}
 		}
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			if(isColorPicking)
+				return;
 			Vector2 currentCanvasMouse = {
 				(mousePos.x - canvasPos.x) / scale,
 				(mousePos.y - canvasPos.y) / scale
@@ -420,6 +468,15 @@ void Canvas::Update() {
 			}
 			mouseState = HELD;
 		} else if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+			if(isColorPicking){
+				if(!contains(colorQueue, clr)){
+					colorQueue.push_front(clr);
+					if(colorQueue.size() > 10){
+						colorQueue.pop_back();
+					}
+				}
+			}
+			isColorPicking = false;
 			mouseState = IDLE;
 			prevMousePos = {-1,-1};
 		}
@@ -439,17 +496,38 @@ void Canvas::Render() {
         
         EndBlendMode();
     }
-	// draw colors
-	DrawTextContrast("Color Bindings: ", 20, 20, 20, WHITE);
-	size_t x = colors.size();
-	for(auto c : colors){
-		DrawTextContrast(TextFormat("%d", c.first-'0'), 20+(20*x), 40, 20, c.second);
-		if(c.second.r == clr.r &&
-		   c.second.g == clr.g &&
-		   c.second.b == clr.b)
-			DrawTextContrast("_", 20+(20*x), 45, 20, BLACK);
-		x--;
+
+	float cWidth = colorPickerRec.width / 6.0f;
+	float padding = cWidth / 5.0f;
+	size_t cols = 5;
+	for (size_t i = 0; i < colorQueue.size(); ++i) {
+		Color c = colorQueue[i];
+		size_t row = i / cols;
+		size_t col = i % cols;
+
+		float xOffset = col * (cWidth + padding);
+		float yOffset = row * (cWidth + padding);
+
+		DrawRectangle(
+			colorPickerRec.x + xOffset,
+			colorPickerRec.y + colorPickerRec.height + yOffset + padding,
+			cWidth,
+			cWidth,
+			c
+		);
+
+		if (c.r == clr.r && c.g == clr.g && c.b == clr.b) {
+			Rectangle outside = {
+				colorPickerRec.x + xOffset,
+				colorPickerRec.y + colorPickerRec.height + yOffset + padding,
+				cWidth*0.95f,
+				cWidth*0.95f
+			};
+			DrawRectangleRoundedLinesEx(outside, 0.0f, 20, 5, BLACK);
+		}
 	}
+
+	DrawTextContrast("Layers:", 15, 20, 30, WHITE);
 	
 	for(int i = layers.size()-1, y = 0; i >= 0; i--, y++){
 		char blend = 'A';
@@ -464,13 +542,19 @@ void Canvas::Render() {
 				blend = 'N';
 				break;
 		}
-		DrawTextContrast(TextFormat("[%c] Layer: %d [%.2f%]", blend , i, 100.0f*(layers[i].opacity/255.0f)), 20, 80+(20*y), 20, i == selectedLayer ? GREEN : WHITE);
+		DrawTextContrast(TextFormat("[%c] Layer: %d [%.2f%]", blend , i, 100.0f*(layers[i].opacity/255.0f)), 20, 60+(24*y), 20, i == selectedLayer ? GREEN : WHITE);
 	}
 	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, WHITE);
 	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);
+	GuiColorPicker(colorPickerRec, "Colors", &clr);
+
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
-	DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
+	if(!CheckCollisionPointRec(GetMousePosition(), colorPickerBounds)){
+		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
+		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
+	}else{
+		DrawCircleV(GetMousePosition(), 2.0f, DARKGRAY);
+	}
 	EndBlendMode();
 }
 
