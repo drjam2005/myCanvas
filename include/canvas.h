@@ -49,10 +49,11 @@ private:
 	std::deque<Color> colorQueue;
 
     MOUSE_STATE mouseState;
-    Vector2 prevMousePos;
+    Vector2 prevMousePos = {-1, -1};
 	Vector2 canvasPos = {0, 0};
 	Rectangle colorPickerRec;
 	Rectangle colorPickerBounds;
+	Image currentLayerCache;
     int width;
     int height;
     float brushSize;
@@ -60,7 +61,7 @@ private:
 	float scale;
 	bool isBrush;
 	bool isMirror;
-	bool isColorPicking;
+	bool isColorPicking = true;
 
     Color clr;
 	char transparency;
@@ -71,11 +72,14 @@ public:
 
     void Update();
     void Render();
-    Layer& getCurrentLayer();
+
 private:
-    void createLayer(bool whiteBackground = false);
-    void drawCircle(Vector2 pos);
-    void drawLine(Vector2 v1, Vector2 v2);
+	Color pick_color(Vector2 pos);
+	Vector2 screen_to_canvas(Vector2 pos);
+    Layer& get_current_layer();
+    void create_layer(bool whiteBackground = false);
+    void draw_circle(Vector2 pos);
+    void draw_line(Vector2 v1, Vector2 v2);
 };
 
 #endif
