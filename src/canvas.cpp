@@ -369,17 +369,24 @@ void Canvas::Update() {
 		currentLayerCache = LoadImageFromTexture(get_current_layer().tex.texture);
 		isColorPicking = true;
 	}
-	if (alt && !ctrl && !space && !shift){
-		if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
-			Color temp = pick_color(mousePos);
-			if(temp.a != 0)
-				clr = pick_color(mousePos);
+	if (alt && !ctrl && !space && !shift) {
+		Color temp = pick_color(mousePos);
+		if (temp.a != 0)
+			previewClr = temp;
+
+		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+			clr = previewClr;
 		}
 		return;
 	}
+
 	if(IsKeyReleased(KEY_LEFT_ALT)){
 		isColorPicking = false;
 		UnloadImage(currentLayerCache);
+	}
+
+	if (!IsKeyDown(KEY_LEFT_ALT)) {
+		previewClr = clr;
 	}
 
 	if(ctrl && !shift){
@@ -597,12 +604,13 @@ void Canvas::Render() {
 	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);
 	GuiColorPicker(colorPickerRec, "Colors", &clr);
 
+
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
 	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds) || isColorPicking){
 		DrawCircleV(GetMousePosition(), 1.0f*scale, clr);
 		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
 		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f)-1.0f, (int)GetMousePosition().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
-		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, pick_color(GetMousePosition()));
+		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, previewClr);
 	}else{
 		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
 		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);

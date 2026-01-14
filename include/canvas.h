@@ -64,6 +64,7 @@ private:
 	bool isColorPicking = true;
 
     Color clr;
+    Color previewClr;
 	char transparency;
     size_t selectedLayer;
 public:
