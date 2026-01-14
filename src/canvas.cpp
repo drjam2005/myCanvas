@@ -163,16 +163,28 @@ void Canvas::draw_circle(Vector2 v1) {
     EndTextureMode();
 }
 
-Vector2 Canvas::screen_to_canvas(Vector2 pos){
-	Vector2 result;
-	result.x = (pos.x - canvasPos.x)/scale;
-	if(isMirror)
-		result.x = width - (pos.x - canvasPos.x)/scale;
-	result.y = height - (pos.y - canvasPos.y)/scale;
 
-	return result;
+Vector2 Canvas::screen_to_canvas(Vector2 pos) {
+    Vector2 result;
+    
+    float xPos = pos.x;
+
+    if (isMirror) {
+        float screenCenterX = GetScreenWidth() * 0.5f;
+        float imageCenterX = canvasPos.x + (width * scale) * 0.5f;
+        float mirrorOffset = (screenCenterX - imageCenterX) * 2.0f;
+
+        xPos -= mirrorOffset;
+
+        result.x = width - (xPos - canvasPos.x) / scale;
+    } else {
+        result.x = (xPos - canvasPos.x) / scale;
+    }
+
+    result.y = height - (pos.y - canvasPos.y) / scale;
+    
+    return result;
 }
-
 
 void Canvas::draw_line(Vector2 canvasFrom, Vector2 canvasTo) {
     BeginTextureMode(layers[selectedLayer].tex);
@@ -216,7 +228,10 @@ void Canvas::Update() {
 			float yOffset = mousePos.y - prevMousePos.y;
 			float xOffset = mousePos.x - prevMousePos.x;
 			canvasPos.y += yOffset;
-			canvasPos.x += xOffset;
+			if(isMirror)
+				canvasPos.x -= xOffset;
+			else
+				canvasPos.x += xOffset;
 		}
 	}
 
@@ -334,13 +349,13 @@ void Canvas::Update() {
 	}
 	if(shift && !ctrl && !space){
 		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-			// nothing yet...
 			prevMousePos = GetMousePosition();
 		}
 
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
 			Vector2 currPos = GetMousePosition();
-			float diff = 0.25f*(currPos.x - prevMousePos.x)/scale;
+			float resizeScale = std::clamp(scale, 0.2f, 7.0f);
+			float diff = 0.25f*(currPos.x - prevMousePos.x)/resizeScale;
 			prevMousePos = currPos;
 			if(isBrush)
 				brushSize = fmax(0.5f, fmin(brushSize + diff, 50.0f));
@@ -517,7 +532,14 @@ void Canvas::Render() {
 		//SetTextureFilter(l.tex.texture, TEXTURE_FILTER_BILINEAR);
         
         Rectangle source = { 0, 0, (float)l.tex.texture.width * (isMirror ? -1 : 1), (float)l.tex.texture.height };
-        Rectangle dest = { canvasPos.x, canvasPos.y, (float)width * scale, (float)height * scale };
+        Rectangle dest = { canvasPos.x , canvasPos.y, (float)width * scale, (float)height * scale };
+
+		float screenCenterX = GetScreenWidth() * 0.5f;
+		float imageCenterX  = dest.x + dest.width * 0.5f;
+
+		if (isMirror) {
+			dest.x += (screenCenterX - imageCenterX) * 2.0f;
+		}
         
         DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
         
