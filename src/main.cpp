@@ -38,7 +38,7 @@ int main(int argc, char** argv){
 
 		canvas.Render();
 
-		DrawFPS(GetScreenWidth()-120, 20);
+		DrawFPS(GetScreenWidth()-60, 20);
 
 		EndDrawing();
 	}
