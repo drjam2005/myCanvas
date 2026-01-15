@@ -115,13 +115,16 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 
 	if(width > height)
 		scale = 0.9f*((float)GetScreenHeight()/height);
-	else
+	else if(height > width)
 		scale = 0.9f*((float)GetScreenWidth()/width);
-
-	if(width > 0.9f*GetScreenWidth())
-		scale = 0.9f*((float)GetScreenWidth()/width);
-	else if(height > 0.9f*GetScreenHeight())
-		scale = 0.9f*((float)GetScreenHeight()/height);
+	else{
+		if(width > 0.9f*GetScreenWidth())
+			scale = 0.9f*((float)GetScreenWidth()/width);
+		else if(height > 0.9f*GetScreenHeight())
+			scale = 0.9f*((float)GetScreenHeight()/height);
+		else
+			scale = 0.9f*((float)GetScreenHeight()/height);
+	}
 
 	canvasPos = {
 		(GetScreenWidth()  - (scale*width))  * 0.5f,
@@ -142,7 +145,7 @@ Layer& Canvas::get_current_layer() {
 Color Canvas::pick_color(Vector2 v1){
 	Color clr;
 	int xpos = (int)(screen_to_canvas(v1).x);
-	int ypos = height - (int)(screen_to_canvas(v1).y);
+	int ypos = height - (int)(screen_to_canvas(v1).y) - 1;
 	clr = GetImageColor(currentLayerCache, xpos, ypos);
 
 	return clr;
@@ -358,7 +361,7 @@ void Canvas::Update() {
 		if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
 			Color temp = pick_color(mousePos);
 			if(temp.a != 0)
-				clr = pick_color(mousePos);
+				clr = temp;
 		}
 		return;
 	}
@@ -576,8 +579,13 @@ void Canvas::Render() {
 	GuiColorPicker(colorPickerRec, "Colors", &clr);
 
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds) || isColorPicking){
-		DrawCircleV(GetMousePosition(), 1.0f*scale, clr);
+	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds)){
+		DrawCircleV(GetMousePosition(), fmin(2.0f, 1.0f*scale), clr);
+		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
+		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f)-1.0f, (int)GetMousePosition().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
+		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, clr);
+	}else if (isColorPicking){
+		DrawCircleV(GetMousePosition(), fmin(2.0f, 1.0f*scale), clr);
 		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
 		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f)-1.0f, (int)GetMousePosition().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
 		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, pick_color(GetMousePosition()));
