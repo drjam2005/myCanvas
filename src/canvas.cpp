@@ -56,6 +56,21 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 					this->width = w;
 					this->height = h;
 					SetWindowSize(w, h);
+					int colorCount;
+					std::string clrc;
+					std::getline(file, clrc);
+					sscanf(clrc.c_str(), "%d", &colorCount);
+					for(size_t i = 0; i < colorCount; ++i){
+						std::string meta;
+						if (!std::getline(file, meta)) break;
+
+						int red, green, blue;
+						sscanf(meta.c_str(), "%d %d %d", &red, &green, &blue);
+						Color clr = {(unsigned char)red, (unsigned char)green, (unsigned char)blue, 255};
+						colorQueue.push_back(clr);
+					}
+					file.ignore(1, '\n'); 
+					
 
 					for (int i = 0; i < layerCount; i++) {
 						std::string meta;
@@ -131,7 +146,12 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 		(GetScreenHeight() - (scale*height)) * 0.5f
 	};
 
-	colorQueue.push_front(BLACK);
+	if(colorQueue.size() <= 0)
+		colorQueue.push_front(BLACK);
+	else{
+		clr = colorQueue[0];
+	}
+
 }
 
 void Canvas::create_layer(bool whiteBackground) {
@@ -166,16 +186,27 @@ void Canvas::draw_circle(Vector2 v1) {
     EndTextureMode();
 }
 
-Vector2 Canvas::screen_to_canvas(Vector2 pos){
-	Vector2 result;
-	result.x = (pos.x - canvasPos.x)/scale;
-	if(isMirror)
-		result.x = width - (pos.x - canvasPos.x)/scale;
-	result.y = height - (pos.y - canvasPos.y)/scale;
+Vector2 Canvas::screen_to_canvas(Vector2 pos) {
+    Vector2 result;
+    
+    float xPos = pos.x;
 
-	return result;
+    if (isMirror) {
+        float screenCenterX = GetScreenWidth() * 0.5f;
+        float imageCenterX = canvasPos.x + (width * scale) * 0.5f;
+        float mirrorOffset = (screenCenterX - imageCenterX) * 2.0f;
+
+        xPos -= mirrorOffset;
+
+        result.x = width - (xPos - canvasPos.x) / scale;
+    } else {
+        result.x = (xPos - canvasPos.x) / scale;
+    }
+
+    result.y = height - (pos.y - canvasPos.y) / scale;
+    
+    return result;
 }
-
 
 void Canvas::draw_line(Vector2 canvasFrom, Vector2 canvasTo) {
     BeginTextureMode(layers[selectedLayer].tex);
@@ -219,7 +250,10 @@ void Canvas::Update() {
 			float yOffset = mousePos.y - prevMousePos.y;
 			float xOffset = mousePos.x - prevMousePos.x;
 			canvasPos.y += yOffset;
-			canvasPos.x += xOffset;
+			if(isMirror)
+				canvasPos.x -= xOffset;
+			else
+				canvasPos.x += xOffset;
 		}
 	}
 
@@ -267,6 +301,12 @@ void Canvas::Update() {
 		if (!file.is_open()) return;
 
 		file << width << " " << height << " " << layers.size() << "\n";
+		// save colors too
+		file << colorQueue.size() << '\n';
+		for(auto c : colorQueue){
+			file << (int)c.r << " " << (int)c.g << " " << (int)c.b << '\n';
+		}
+		file << '\n';
 		for (auto& l : layers) {
 			int compressedSize = 0;
 
@@ -337,13 +377,13 @@ void Canvas::Update() {
 	}
 	if(shift && !ctrl && !space){
 		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-			// nothing yet...
 			prevMousePos = GetMousePosition();
 		}
 
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
 			Vector2 currPos = GetMousePosition();
-			float diff = 0.25f*(currPos.x - prevMousePos.x)/scale;
+			float resizeScale = std::clamp(scale, 0.2f, 7.0f);
+			float diff = 0.25f*(currPos.x - prevMousePos.x)/resizeScale;
 			prevMousePos = currPos;
 			if(isBrush)
 				brushSize = fmax(0.5f, fmin(brushSize + diff, 50.0f));
@@ -357,17 +397,24 @@ void Canvas::Update() {
 		currentLayerCache = LoadImageFromTexture(get_current_layer().tex.texture);
 		isColorPicking = true;
 	}
-	if (alt && !ctrl && !space && !shift){
-		if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)){
-			Color temp = pick_color(mousePos);
-			if(temp.a != 0)
-				clr = temp;
+	if (alt && !ctrl && !space && !shift) {
+		Color temp = pick_color(mousePos);
+		if (temp.a != 0)
+			previewClr = temp;
+
+		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+			clr = previewClr;
 		}
 		return;
 	}
+
 	if(IsKeyReleased(KEY_LEFT_ALT)){
 		isColorPicking = false;
 		UnloadImage(currentLayerCache);
+	}
+
+	if (!IsKeyDown(KEY_LEFT_ALT)) {
+		previewClr = clr;
 	}
 
 	if(ctrl && !shift){
@@ -520,7 +567,14 @@ void Canvas::Render() {
 		//SetTextureFilter(l.tex.texture, TEXTURE_FILTER_BILINEAR);
         
         Rectangle source = { 0, 0, (float)l.tex.texture.width * (isMirror ? -1 : 1), (float)l.tex.texture.height };
-        Rectangle dest = { canvasPos.x, canvasPos.y, (float)width * scale, (float)height * scale };
+        Rectangle dest = { canvasPos.x , canvasPos.y, (float)width * scale, (float)height * scale };
+
+		float screenCenterX = GetScreenWidth() * 0.5f;
+		float imageCenterX  = dest.x + dest.width * 0.5f;
+
+		if (isMirror) {
+			dest.x += (screenCenterX - imageCenterX) * 2.0f;
+		}
         
         DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
         
@@ -584,21 +638,17 @@ void Canvas::Render() {
 	
 
 
+
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds)){
-		DrawCircleV(GetMousePosition(), fmin(2.0f, 1.0f*scale), clr);
+	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds) || isColorPicking){
+		DrawCircleV(GetMousePosition(), 1.0f*scale, clr);
 		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
 		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f)-1.0f, (int)GetMousePosition().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
-		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, clr);
-	}else if (isColorPicking){
-		DrawCircleV(GetMousePosition(), fmin(2.0f, 1.0f*scale), clr);
-		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
-		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f)-1.0f, (int)GetMousePosition().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
-		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, pick_color(GetMousePosition()));
+		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, previewClr);
 	}else{
 		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
 		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
 	}
+
 	EndBlendMode();
 }
-
