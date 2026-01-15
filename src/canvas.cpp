@@ -574,9 +574,15 @@ void Canvas::Render() {
 		}
 		DrawTextContrast(TextFormat("[%c] Layer: %d [%.2f%]", blend , i, 100.0f*(layers[i].opacity/255.0f)), 20, 60+(24*y), 20, i == selectedLayer ? GREEN : WHITE);
 	}
-	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, WHITE);
+	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, isBrush ? WHITE : PINK);
 	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);
+	if(isMirror){
+		DrawTextContrast(TextFormat("Mirrored: True"), 20, GetScreenHeight()-100.0f, 20, GREEN);
+	}else
+		DrawTextContrast(TextFormat("Mirrored: False"), 20, GetScreenHeight()-100.0f, 20, WHITE);
 	GuiColorPicker(colorPickerRec, "Colors", &clr);
+	
+
 
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
 	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds)){
@@ -593,7 +599,6 @@ void Canvas::Render() {
 		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
 		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
 	}
-
 	EndBlendMode();
 }
 

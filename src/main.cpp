@@ -29,6 +29,7 @@ int main(int argc, char** argv){
 
 	Canvas canvas;
 	canvas = Canvas(width, height, 16, fileName);
+	//SetExitKey(KEY_NULL);
 	
 	while(!WindowShouldClose()){
 		canvas.Update();
@@ -38,11 +39,8 @@ int main(int argc, char** argv){
 
 		canvas.Render();
 
-		DrawFPS(GetScreenWidth()-60, 20);
-
 		EndDrawing();
 	}
-
 	CloseWindow();
 	return 0;
 }
