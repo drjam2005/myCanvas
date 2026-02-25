@@ -52,7 +52,6 @@ elseif (UNIX)
         m
         pthread
         dl
-        GL
         X11
     )
 endif()
