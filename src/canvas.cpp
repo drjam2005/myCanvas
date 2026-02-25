@@ -383,11 +383,7 @@ void Canvas::Update() {
 			Vector2 pos2 = { mousePos.x - GetScreenWidth() / 2.0f, mousePos.y - GetScreenHeight() / 2.0f };
 
 			float angleDelta = Vector2Angle(pos1, pos2);
-			if (isMirror) {
-				rotation -= angleDelta;
-			} else {
 				rotation += angleDelta;
-			}
 		}
 	}
 
