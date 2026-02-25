@@ -48,9 +48,12 @@ private:
 
     MOUSE_STATE mouseState;
     Vector2 prevMousePos = {-1, -1};
+	Vector2 pressedMousePos = {-1, -1};
 	Vector2 canvasPos = {0, 0};
 	Rectangle colorPickerRec;
 	Rectangle colorPickerBounds;
+	Rectangle canvasDimensions;
+	float rotation = 0.0f;
 	Image currentLayerCache;
     int width;
     int height;

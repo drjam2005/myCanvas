@@ -8,6 +8,7 @@
 
 #include "canvas.h"
 #include "raylib.h"
+#include "raymath.h"
 #include "rlgl.h"
 
 #define RAYGUI_IMPLEMENTATION
@@ -44,6 +45,10 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 	  isMirror(false), isColorPicking(false)
 {
 	bool loadedSuccessfully = false;
+	canvasDimensions.x = 0;
+	canvasDimensions.y = 0;
+	canvasDimensions.width = width;
+	canvasDimensions.height = height;
 
 	if (fileName != "") {
 		std::ifstream file(fileName, std::ios::binary);
@@ -187,24 +192,29 @@ void Canvas::draw_circle(Vector2 v1) {
 }
 
 Vector2 Canvas::screen_to_canvas(Vector2 pos) {
-    Vector2 result;
-    
-    float xPos = pos.x;
+    Vector2 screenCenter = { (float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
 
+    // 1. Shift the mouse position so the screen center is (0,0)
+    Vector2 result = Vector2Subtract(pos, screenCenter);
+
+    // 2. Rotate the point inversely around that screen center
+    result = Vector2Rotate(result, -rotation);
+
+    // 3. Shift the point back using the canvas position relative to screen center
+    // This effectively brings the point into "Unrotated Canvas Space"
+    result = Vector2Add(result, screenCenter);
+    result = Vector2Subtract(result, canvasPos);
+
+    // 4. Handle Mirroring (Mirroring happens across the center of the canvas width)
     if (isMirror) {
-        float screenCenterX = GetScreenWidth() * 0.5f;
-        float imageCenterX = canvasPos.x + (width * scale) * 0.5f;
-        float mirrorOffset = (screenCenterX - imageCenterX) * 2.0f;
-
-        xPos -= mirrorOffset;
-
-        result.x = width - (xPos - canvasPos.x) / scale;
-    } else {
-        result.x = (xPos - canvasPos.x) / scale;
+        float canvasWidthScaled = width * scale;
+        result.x = canvasWidthScaled - result.x;
     }
 
-    result.y = height - (pos.y - canvasPos.y) / scale;
-    
+    // 5. Scale down to pixel coordinates
+    result.x /= scale;
+    result.y /= scale;
+
     return result;
 }
 
@@ -245,15 +255,18 @@ void Canvas::Update() {
 	bool alt   = IsKeyDown(KEY_LEFT_ALT);
 	
 
-	if (space && !ctrl && !shift){
-		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-			float yOffset = mousePos.y - prevMousePos.y;
-			float xOffset = mousePos.x - prevMousePos.x;
-			canvasPos.y += yOffset;
-			if(isMirror)
-				canvasPos.x -= xOffset;
-			else
-				canvasPos.x += xOffset;
+	if (space && !ctrl && !shift) {
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			Vector2 mouseDelta = Vector2Subtract(mousePos, prevMousePos);
+
+			Vector2 rotatedDelta = Vector2Rotate(mouseDelta, -rotation);
+			if (isMirror) {
+				canvasPos.x -= rotatedDelta.x;
+				canvasPos.y += rotatedDelta.y;
+			} else {
+				canvasPos.x += rotatedDelta.x;
+				canvasPos.y += rotatedDelta.y;
+			}
 		}
 	}
 
@@ -359,6 +372,7 @@ void Canvas::Update() {
 			Image finalImage = LoadImageFromTexture(finalTex.texture);
 			std::string finalFilePath = fileName + ".png";
 			ExportImage(finalImage, finalFilePath.c_str());
+			std::cout << "Saved: " << finalFilePath << '\n';
 	
 		}
 
@@ -373,6 +387,14 @@ void Canvas::Update() {
 				eraserSize = fmax(0.5f, fmin(eraserSize + diff, 50.0f));
 		}
 		return;
+	}
+	if(shift && space && !ctrl){
+		//rotation...
+		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+			Vector2 pos1 = {prevMousePos.x - GetScreenWidth()/2.0f, prevMousePos.y - GetScreenHeight()/2.0f};
+			Vector2 pos2 = {mousePos.x - GetScreenWidth()/2.0f, mousePos.y - GetScreenHeight()/2.0f};
+			rotation += Vector2Angle(pos1, pos2);
+		}
 	}
 
 	if(IsKeyPressed(KEY_LEFT_ALT)){
@@ -458,6 +480,9 @@ void Canvas::Update() {
 		if(IsKeyPressed(KEY_M)){
 			isMirror = !isMirror;
 		}
+		if(IsKeyPressed(KEY_FIVE)){
+			rotation = 0.0f;
+		}
 		if(IsKeyPressed(KEY_A)){
 			layers[selectedLayer].opacity = (unsigned char)fmax(layers[selectedLayer].opacity - (255.0f/10.0f), 0.0f);
 		}else if (IsKeyPressed(KEY_D)){
@@ -474,46 +499,44 @@ void Canvas::Update() {
 		}
 
 
-	if (IsKeyPressed(KEY_ENTER)) {
-		if (fileName == "") fileName = "myTemp";
+		if (IsKeyPressed(KEY_ENTER)) {
+			if (fileName == "") fileName = "myTemp";
 
-		std::ofstream file(fileName, std::ios::binary);
-		if (!file.is_open()) return;
+			std::ofstream file(fileName, std::ios::binary);
+			if (!file.is_open()) return;
 
-		file << width << " " << height << " " << layers.size() << "\n";
-		// save colors too
-		file << colorQueue.size() << '\n';
-		for(auto c : colorQueue){
-			file << (int)c.r << " " << (int)c.g << " " << (int)c.b << '\n';
+			file << width << " " << height << " " << layers.size() << "\n";
+			// save colors too
+			file << colorQueue.size() << '\n';
+			for(auto c : colorQueue){
+				file << (int)c.r << " " << (int)c.g << " " << (int)c.b << '\n';
+			}
+			file << '\n';
+			for (auto& l : layers) {
+				int compressedSize = 0;
+
+				unsigned char opacity = (unsigned char)l.opacity;
+				int blendMode = (int)l.blendingMode;
+
+				Image img = LoadImageFromTexture(l.tex.texture);
+				unsigned char* compressedData =
+					CompressData((unsigned char*)(LoadImageColors(img)),
+							(img.width * img.height) * sizeof(Color),
+							&compressedSize);
+
+				file << (int)opacity << " "
+					<< blendMode << " "
+					<< compressedSize << "\n";
+
+				file.write((char*)compressedData, compressedSize);
+
+				file << "\n";
+
+				MemFree(compressedData);
+			}
+			std::cout << "Saved " << fileName << "!" << '\n';
+
 		}
-		file << '\n';
-		for (auto& l : layers) {
-			int compressedSize = 0;
-
-			unsigned char opacity = (unsigned char)l.opacity;
-			int blendMode = (int)l.blendingMode;
-
-			Image img = LoadImageFromTexture(l.tex.texture);
-			unsigned char* compressedData =
-				CompressData((unsigned char*)(LoadImageColors(img)),
-						(img.width * img.height) * sizeof(Color),
-						&compressedSize);
-
-			file << (int)opacity << " "
-				<< blendMode << " "
-				<< compressedSize << "\n";
-
-			file.write((char*)compressedData, compressedSize);
-
-			file << "\n";
-
-			MemFree(compressedData);
-		}
-		std::cout << "Saved " << fileName << "!" << '\n';
-
-	}
-
-
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			if(CheckCollisionPointRec(mousePos, colorPickerBounds)){
 				isColorPicking = true;
@@ -549,7 +572,7 @@ void Canvas::Update() {
 				UnloadImage(undo.back().second);
 				undo.pop_back();
 			}
-			
+
 			while (!redo.empty()) {
 				UnloadImage(redo.back().second);
 				redo.pop_back();
@@ -579,28 +602,43 @@ void Canvas::Update() {
 			mouseState = IDLE;
 			prevMousePos = {-1,-1};
 		}
-	   
 	}
 	prevMousePos = mousePos;
 }
 
 void Canvas::Render() {
-	for(auto& l : layers) {
+	Vector2 screenCenter = { (float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
+    for(auto& l : layers) {
         BeginBlendMode(l.blendingMode);
-		//SetTextureFilter(l.tex.texture, TEXTURE_FILTER_BILINEAR);
-        
-        Rectangle source = { 0, 0, (float)l.tex.texture.width * (isMirror ? -1 : 1), (float)l.tex.texture.height };
-        Rectangle dest = { canvasPos.x , canvasPos.y, (float)width * scale, (float)height * scale };
 
-		float screenCenterX = GetScreenWidth() * 0.5f;
-		float imageCenterX  = dest.x + dest.width * 0.5f;
+        // Flip Y for texture mode rendering
+        Rectangle source = { 0, 0, (float)width, -(float)height };
+        if (isMirror) source.width *= -1;
 
-		if (isMirror) {
-			dest.x += (screenCenterX - imageCenterX) * 2.0f;
-		}
-        
-        DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
-        
+        Rectangle dest = {
+            screenCenter.x,
+            screenCenter.y,
+            (float)width * scale,
+            (float)height * scale
+        };
+
+        // The 'origin' is the offset from the dest.x/y to the pivot point.
+        // To rotate around the screen center, but keep the canvas correctly offset,
+        // we calculate the vector from the screen center to where the canvas top-left should be.
+        Vector2 origin = {
+            screenCenter.x - canvasPos.x,
+            screenCenter.y - canvasPos.y
+        };
+
+        DrawTexturePro(
+            l.tex.texture,
+            source,
+            dest,
+            origin,
+            rotation * RAD2DEG,
+            Color{255, 255, 255, (unsigned char)l.opacity}
+        );
+
         EndBlendMode();
     }
 
