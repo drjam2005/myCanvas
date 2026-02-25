@@ -194,24 +194,18 @@ void Canvas::draw_circle(Vector2 v1) {
 Vector2 Canvas::screen_to_canvas(Vector2 pos) {
     Vector2 screenCenter = { (float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
 
-    // 1. Shift the mouse position so the screen center is (0,0)
     Vector2 result = Vector2Subtract(pos, screenCenter);
 
-    // 2. Rotate the point inversely around that screen center
     result = Vector2Rotate(result, -rotation);
 
-    // 3. Shift the point back using the canvas position relative to screen center
-    // This effectively brings the point into "Unrotated Canvas Space"
-    result = Vector2Add(result, screenCenter);
-    result = Vector2Subtract(result, canvasPos);
+    result.x -= (canvasPos.x - screenCenter.x);
+    result.y -= (canvasPos.y - screenCenter.y);
 
-    // 4. Handle Mirroring (Mirroring happens across the center of the canvas width)
     if (isMirror) {
         float canvasWidthScaled = width * scale;
         result.x = canvasWidthScaled - result.x;
     }
 
-    // 5. Scale down to pixel coordinates
     result.x /= scale;
     result.y /= scale;
 
@@ -260,13 +254,8 @@ void Canvas::Update() {
 			Vector2 mouseDelta = Vector2Subtract(mousePos, prevMousePos);
 
 			Vector2 rotatedDelta = Vector2Rotate(mouseDelta, -rotation);
-			if (isMirror) {
-				canvasPos.x -= rotatedDelta.x;
-				canvasPos.y += rotatedDelta.y;
-			} else {
-				canvasPos.x += rotatedDelta.x;
-				canvasPos.y += rotatedDelta.y;
-			}
+			canvasPos.x += rotatedDelta.x;
+			canvasPos.y += rotatedDelta.y;
 		}
 	}
 
@@ -388,12 +377,17 @@ void Canvas::Update() {
 		}
 		return;
 	}
-	if(shift && space && !ctrl){
-		//rotation...
-		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-			Vector2 pos1 = {prevMousePos.x - GetScreenWidth()/2.0f, prevMousePos.y - GetScreenHeight()/2.0f};
-			Vector2 pos2 = {mousePos.x - GetScreenWidth()/2.0f, mousePos.y - GetScreenHeight()/2.0f};
-			rotation += Vector2Angle(pos1, pos2);
+	if (shift && space && !ctrl) {
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			Vector2 pos1 = { prevMousePos.x - GetScreenWidth() / 2.0f, prevMousePos.y - GetScreenHeight() / 2.0f };
+			Vector2 pos2 = { mousePos.x - GetScreenWidth() / 2.0f, mousePos.y - GetScreenHeight() / 2.0f };
+
+			float angleDelta = Vector2Angle(pos1, pos2);
+			if (isMirror) {
+				rotation -= angleDelta;
+			} else {
+				rotation += angleDelta;
+			}
 		}
 	}
 
@@ -479,6 +473,7 @@ void Canvas::Update() {
 	if(!ctrl && !shift && !space){
 		if(IsKeyPressed(KEY_M)){
 			isMirror = !isMirror;
+			rotation *= -1;
 		}
 		if(IsKeyPressed(KEY_FIVE)){
 			rotation = 0.0f;
