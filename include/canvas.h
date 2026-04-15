@@ -82,6 +82,9 @@ private:
     void create_layer(bool whiteBackground = false);
     void draw_circle(Vector2 pos);
     void draw_line(Vector2 v1, Vector2 v2);
+
+	void save_to_png();
+	void save();
 };
 
 #endif

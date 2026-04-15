@@ -261,6 +261,7 @@ void Canvas::Update() {
 
 	if (ctrl && space) {
 		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 			static float zoomAccumulator = 0.0f;
 			if (ctrl && space && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
 				Vector2 mousePos = GetMousePosition();
@@ -344,25 +345,9 @@ void Canvas::Update() {
 			prevMousePos = GetMousePosition();
 		}
 		if(IsKeyPressed(KEY_ENTER)){
-			RenderTexture finalTex = LoadRenderTexture(width, height);
-			BeginTextureMode(finalTex);
-			ClearBackground(BLANK);
-			for(auto& l : layers) {
-				BeginBlendMode(l.blendingMode);
-
-				Rectangle source = { 0, 0, (float)width, -(float)height};
-				Rectangle dest = { 0, 0,   (float)width,  (float)height};
-
-				DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
-
-				EndBlendMode();
-			}
-			EndTextureMode();
-			Image finalImage = LoadImageFromTexture(finalTex.texture);
-			std::string finalFilePath = fileName + ".png";
-			ExportImage(finalImage, finalFilePath.c_str());
-			std::cout << "Saved: " << finalFilePath << '\n';
-	
+			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
+			save();
+			save_to_png();
 		}
 
 		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
@@ -491,44 +476,11 @@ void Canvas::Update() {
 
 
 		if (IsKeyPressed(KEY_ENTER)) {
-			if (fileName == "") fileName = "myTemp";
-
-			std::ofstream file(fileName, std::ios::binary);
-			if (!file.is_open()) return;
-
-			file << width << " " << height << " " << layers.size() << "\n";
-			// save colors too
-			file << colorQueue.size() << '\n';
-			for(auto c : colorQueue){
-				file << (int)c.r << " " << (int)c.g << " " << (int)c.b << '\n';
-			}
-			file << '\n';
-			for (auto& l : layers) {
-				int compressedSize = 0;
-
-				unsigned char opacity = (unsigned char)l.opacity;
-				int blendMode = (int)l.blendingMode;
-
-				Image img = LoadImageFromTexture(l.tex.texture);
-				unsigned char* compressedData =
-					CompressData((unsigned char*)(LoadImageColors(img)),
-							(img.width * img.height) * sizeof(Color),
-							&compressedSize);
-
-				file << (int)opacity << " "
-					<< blendMode << " "
-					<< compressedSize << "\n";
-
-				file.write((char*)compressedData, compressedSize);
-
-				file << "\n";
-
-				MemFree(compressedData);
-			}
-			std::cout << "Saved " << fileName << "!" << '\n';
-
+			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
+			save();
 		}
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+			SetWindowTitle(TextFormat("myCanvas | %s (*)", fileName.c_str()));
 			if(CheckCollisionPointRec(mousePos, colorPickerBounds)){
 				isColorPicking = true;
 				return;
@@ -703,4 +655,64 @@ void Canvas::Render() {
 	}
 
 	EndBlendMode();
+}
+
+void Canvas::save(){
+	if (fileName == "") fileName = "myTemp";
+
+	std::ofstream file(fileName, std::ios::binary);
+	if (!file.is_open()) return;
+
+	file << width << " " << height << " " << layers.size() << "\n";
+	// save colors too
+	file << colorQueue.size() << '\n';
+	for(auto c : colorQueue){
+		file << (int)c.r << " " << (int)c.g << " " << (int)c.b << '\n';
+	}
+	file << '\n';
+	for (auto& l : layers) {
+		int compressedSize = 0;
+
+		unsigned char opacity = (unsigned char)l.opacity;
+		int blendMode = (int)l.blendingMode;
+
+		Image img = LoadImageFromTexture(l.tex.texture);
+		unsigned char* compressedData =
+			CompressData((unsigned char*)(LoadImageColors(img)),
+					(img.width * img.height) * sizeof(Color),
+					&compressedSize);
+
+		file << (int)opacity << " "
+			<< blendMode << " "
+			<< compressedSize << "\n";
+
+		file.write((char*)compressedData, compressedSize);
+
+		file << "\n";
+
+		MemFree(compressedData);
+	}
+	std::cout << "Saved " << fileName << "!" << '\n';
+}
+
+void Canvas::save_to_png(){
+	RenderTexture finalTex = LoadRenderTexture(width, height);
+	BeginTextureMode(finalTex);
+	ClearBackground(BLANK);
+	for(auto& l : layers) {
+		BeginBlendMode(l.blendingMode);
+
+		Rectangle source = { 0, 0, (float)width, -(float)height};
+		Rectangle dest = { 0, 0,   (float)width,  (float)height};
+
+		DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
+
+		EndBlendMode();
+	}
+	EndTextureMode();
+	Image finalImage = LoadImageFromTexture(finalTex.texture);
+	std::string finalFilePath = fileName + ".png";
+	ExportImage(finalImage, finalFilePath.c_str());
+	std::cout << "Saved: " << finalFilePath << '\n';
+
 }
