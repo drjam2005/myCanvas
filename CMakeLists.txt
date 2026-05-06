@@ -26,14 +26,14 @@ if (WIN32)
         ${CMAKE_SOURCE_DIR}/vendor/raylib/windows/lib
     )
     target_link_libraries(${exec} PRIVATE
-        winmm
-        gdi32
+		raylib
+		gdi32
+		winmm
         opengl32
         shell32
         user32
-		raylib
     )
-else()
+elseif(UNIX)
 	target_include_directories(${exec} PRIVATE
         ${CMAKE_SOURCE_DIR}/vendor/raylib/unix/include
 	)
