@@ -19,39 +19,33 @@ target_include_directories(${exec} PRIVATE
 )
 
 if (WIN32)
+	target_include_directories(${exec} PRIVATE
+        ${CMAKE_SOURCE_DIR}/vendor/raylib/windows/include
+	)
     target_link_directories(${exec} PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/windows
+        ${CMAKE_SOURCE_DIR}/vendor/raylib/windows/lib
     )
-else()
-    target_link_directories(${exec} PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/unix
-    )
-endif()
-
-target_link_libraries(${exec} PRIVATE raylib)
-
-# ---- Platform-specific deps ----
-if (WIN32)
     target_link_libraries(${exec} PRIVATE
         winmm
         gdi32
         opengl32
         shell32
         user32
+		raylib
     )
-
-    add_custom_command(
-        TARGET ${exec} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_SOURCE_DIR}/lib/windows/raylib.dll
-            $<TARGET_FILE_DIR:${exec}>
+else()
+	target_include_directories(${exec} PRIVATE
+        ${CMAKE_SOURCE_DIR}/vendor/raylib/unix/include
+	)
+    target_link_directories(${exec} PRIVATE
+        ${CMAKE_SOURCE_DIR}/vendor/raylib/unix/lib
     )
-
-elseif (UNIX)
     target_link_libraries(${exec} PRIVATE
         m
         pthread
         dl
         X11
+		raylib
     )
 endif()
+
