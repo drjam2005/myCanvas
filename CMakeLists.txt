@@ -32,21 +32,20 @@ if(WIN32)
     target_compile_definitions(${exec} PRIVATE SDL_STATIC_LIB)
     target_link_libraries(${exec} PRIVATE
         raylib
-		SDL::SDL3
-        m
-        gdi32
-        winmm
-        imm32
-        ole32
-        oleaut32
-        version
-        uuid
-        advapi32
-        setupapi
-        shell32
-        dinput8
-        winspool
-        comdlg32
+		SDL3
+		m
+		hid
+		setupapi
+		winmm
+		imm32
+		version
+		ole32
+		oleaut32
+		uuid
+		advapi32
+		user32
+		gdi32
+		shell32
     )
 elseif(UNIX)
     target_link_directories(${exec} PRIVATE
