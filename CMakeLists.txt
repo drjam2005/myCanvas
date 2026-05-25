@@ -17,8 +17,6 @@ add_executable(${exec} ${src})
 
 target_include_directories(${exec} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/vendor/SDL/include
-    ${CMAKE_SOURCE_DIR}/vendor/raylib-src/src
 )
 
 if(WIN32)
@@ -26,10 +24,15 @@ if(WIN32)
         ${CMAKE_SOURCE_DIR}/vendor/SDL/windows/lib
         ${CMAKE_SOURCE_DIR}/vendor/raylib/windows/lib
     )
+	target_include_directories(${exec} PRIVATE
+		${CMAKE_SOURCE_DIR}/vendor/raylib/windows/include/
+		${CMAKE_SOURCE_DIR}/vendor/SDL/windows/include/
+	)
+
     target_compile_definitions(${exec} PRIVATE SDL_STATIC_LIB)
     target_link_libraries(${exec} PRIVATE
         raylib
-        SDL3
+		SDL::SDL3
         m
         gdi32
         winmm
@@ -51,6 +54,10 @@ elseif(UNIX)
         ${CMAKE_SOURCE_DIR}/vendor/raylib/unix/lib
     )
     target_compile_definitions(${exec} PRIVATE SDL_STATIC_LIB)
+	target_include_directories(${exec} PRIVATE
+		${CMAKE_SOURCE_DIR}/vendor/raylib/unix/include/
+		${CMAKE_SOURCE_DIR}/vendor/SDL/unix/include/
+	)
     target_link_libraries(${exec} PRIVATE
         raylib
         SDL3
