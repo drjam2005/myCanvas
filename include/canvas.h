@@ -5,6 +5,7 @@
 #include <string>
 #include <deque>
 #include "raylib.h"
+#include <SDLHandler.h>
 
 enum MOUSE_STATE {
     HELD,
@@ -48,6 +49,7 @@ private:
 
     MOUSE_STATE mouseState;
     Vector2 prevMousePos = {-1, -1};
+	Vector2 pointerPos = {0, 0};
 	Vector2 pressedMousePos = {-1, -1};
 	Vector2 canvasPos = {0, 0};
 	Rectangle colorPickerRec;
@@ -58,9 +60,12 @@ private:
     int width;
     int height;
     float brushSize;
+	float pressure;
 	float eraserSize;
 	float scale;
 	bool isBrush;
+	bool isPenInProximity = false;
+	bool isPenDown = false;
 	bool isMirror;
 	bool isColorPicking = true;
 
@@ -78,10 +83,12 @@ public:
 private:
 	Color pick_color(Vector2 pos);
 	Vector2 screen_to_canvas(Vector2 pos);
+	Vector2 GetMousePos();
     Layer& get_current_layer();
     void create_layer(bool whiteBackground = false);
     void draw_circle(Vector2 pos);
     void draw_line(Vector2 v1, Vector2 v2);
+
 
 	void save_to_png();
 	void save();

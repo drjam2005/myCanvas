@@ -1,6 +1,10 @@
 #include <raylib.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_hints.h>
 #include <cstring>
 #include <canvas.h>
+#include <iostream>
+#include <SDLHandler.h>
 
 int main(int argc, char** argv){
 	std::string fileName = "";
@@ -25,6 +29,9 @@ int main(int argc, char** argv){
 	SetTraceLogLevel(LOG_NONE);
 	SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT );
 	InitWindow(width, height, "myCanvas");
+	if (!SDL_AddEventWatch(WatchSDLEvent, nullptr)) {
+		std::cout << "SDL_AddEventWatch failed: " << SDL_GetError() << '\n';
+	}
 	HideCursor();
 
 	Canvas canvas;
@@ -36,6 +43,7 @@ int main(int argc, char** argv){
 
 		BeginDrawing();
 		ClearBackground(DARKGRAY);
+		DrawFPS(20, 20);
 
 		canvas.Render();
 

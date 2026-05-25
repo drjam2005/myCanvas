@@ -7,9 +7,11 @@
 #include <cmath>
 
 #include "canvas.h"
+#include "SDL3/SDL_pen.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
+#include "SDLHandler.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -37,6 +39,16 @@ bool contains(const std::deque<Color>& d, Color value) {
     return false;
 }
 
+static float AngleFromScreenCenter(Vector2 pos) {
+	return atan2f(pos.y - (GetScreenHeight()*0.5f), pos.x - (GetScreenWidth()*0.5f));
+}
+
+static float NormalizeAngleDelta(float delta) {
+	while (delta > PI) delta -= 2.0f*PI;
+	while (delta < -PI) delta += 2.0f*PI;
+	return delta;
+}
+
 Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
     : width(width), height(height),
       brushSize(20.0f), eraserSize(20.0f), selectedLayer(0),
@@ -44,6 +56,7 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
       fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f),
 	  isMirror(false), isColorPicking(false)
 {
+	pressure = 1.0f;
 	bool loadedSuccessfully = false;
 	canvasDimensions.x = 0;
 	canvasDimensions.y = 0;
@@ -177,7 +190,7 @@ Color Canvas::pick_color(Vector2 v1){
 }
 
 void Canvas::draw_circle(Vector2 v1) {
-    float r = isBrush ? brushSize : eraserSize;
+    float r = (isBrush ? brushSize : eraserSize) * pressure;
     BeginTextureMode(layers[selectedLayer].tex);
     
     if (!isBrush) {
@@ -220,9 +233,10 @@ void Canvas::draw_line(Vector2 canvasFrom, Vector2 canvasTo) {
         rlSetBlendMode(BLEND_CUSTOM);
     }
 
-	DrawCircleV(canvasFrom, (isBrush ? brushSize : eraserSize), isBrush ? clr : WHITE);
-	DrawLineEx(canvasFrom, canvasTo, 2*(isBrush ? brushSize : eraserSize), isBrush ? clr : WHITE);
-	DrawCircleV(canvasTo, (isBrush ? brushSize : eraserSize), isBrush ? clr : WHITE);
+    float r = (isBrush ? brushSize : eraserSize) * pressure;
+	DrawCircleV(canvasFrom, r, isBrush ? clr : WHITE);
+	DrawLineEx(canvasFrom, canvasTo, 2*r, isBrush ? clr : WHITE);
+	DrawCircleV(canvasTo, r, isBrush ? clr : WHITE);
 
 	if(!isBrush){
 		rlSetBlendMode(BLEND_ALPHA);
@@ -230,8 +244,62 @@ void Canvas::draw_line(Vector2 canvasFrom, Vector2 canvasTo) {
     EndTextureMode();
 }
 
+Vector2 Canvas::GetMousePos(){
+	return pointerPos;
+}
+
 void Canvas::Update() {
-    Vector2 mousePos = GetMousePosition();
+	pointerPos = GetMousePosition();
+	bool penPressedThisFrame = false;
+	bool penReleasedThisFrame = false;
+
+	for (const SDL_Event& e : DrainPenEvents()) {
+		switch(e.type){
+			case SDL_EVENT_PEN_PROXIMITY_IN: 
+				isPenInProximity = true;
+				break;
+
+			case SDL_EVENT_PEN_PROXIMITY_OUT:
+				isPenInProximity = false;
+				isPenDown = false;
+				pressure = 1.0f;
+				break;
+
+			case SDL_EVENT_PEN_DOWN:
+				pointerPos = { e.ptouch.x, e.ptouch.y };
+				isPenDown = true;
+				penPressedThisFrame = true;
+				break;
+
+			case SDL_EVENT_PEN_UP:
+				pointerPos = { e.ptouch.x, e.ptouch.y };
+				isPenDown = false;
+				penReleasedThisFrame = true;
+				pressure = 1.0f;
+				break;
+
+			case SDL_EVENT_PEN_MOTION:
+				pointerPos = { e.pmotion.x, e.pmotion.y };
+				isPenDown = (e.pmotion.pen_state & SDL_PEN_INPUT_DOWN) != 0;
+				break;
+
+			case SDL_EVENT_PEN_AXIS:
+				pointerPos = { e.paxis.x, e.paxis.y };
+				isPenDown = (e.paxis.pen_state & SDL_PEN_INPUT_DOWN) != 0;
+				if(e.paxis.axis == SDL_PEN_AXIS_PRESSURE){
+					pressure = e.paxis.value;
+				}
+				break;
+
+			default:
+				break;
+		}
+	}
+
+    Vector2 mousePos = GetMousePos();
+	bool pointerPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || penPressedThisFrame;
+	bool pointerDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || isPenDown;
+	bool pointerReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || penReleasedThisFrame;
 
 	float smaller = fmax(500.0f,fmin(GetScreenWidth(), GetScreenHeight()));
 	colorPickerRec = {
@@ -250,7 +318,10 @@ void Canvas::Update() {
 	
 
 	if (space && !ctrl && !shift) {
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+		if (pointerPressed) {
+			prevMousePos = mousePos;
+		}
+		if (pointerDown) {
 			Vector2 mouseDelta = Vector2Subtract(mousePos, prevMousePos);
 
 			Vector2 rotatedDelta = Vector2Rotate(mouseDelta, -rotation);
@@ -260,11 +331,14 @@ void Canvas::Update() {
 	}
 
 	if (ctrl && space) {
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+		if (pointerPressed) {
+			prevMousePos = mousePos;
+		}
+		if (pointerDown) {
 			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 			static float zoomAccumulator = 0.0f;
-			if (ctrl && space && IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-				Vector2 mousePos = GetMousePosition();
+			if (ctrl && space && pointerDown) {
+				Vector2 mousePos = GetMousePos();
 				float yDelta = mousePos.y - prevMousePos.y;
 
 				zoomAccumulator += yDelta;
@@ -341,35 +415,53 @@ void Canvas::Update() {
 		}
 	}
 	if(shift && !ctrl && !space){
-		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-			prevMousePos = GetMousePosition();
-		}
+		static bool resizingBrush = false;
+		static float lastResizeMouseX = 0.0f;
+
 		if(IsKeyPressed(KEY_ENTER)){
 			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 			save();
 			save_to_png();
 		}
 
-		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-			Vector2 currPos = GetMousePosition();
+		if(pointerDown){
+			if (!resizingBrush || pointerPressed) {
+				lastResizeMouseX = mousePos.x;
+				resizingBrush = true;
+			}
+
 			float resizeScale = std::clamp(scale, 0.2f, 7.0f);
-			float diff = 0.25f*(currPos.x - prevMousePos.x)/resizeScale;
-			prevMousePos = currPos;
+			float diff = 0.25f*(mousePos.x - lastResizeMouseX)/resizeScale;
+			lastResizeMouseX = mousePos.x;
+
 			if(isBrush)
 				brushSize = fmax(0.5f, fmin(brushSize + diff, 50.0f));
 			else
 				eraserSize = fmax(0.5f, fmin(eraserSize + diff, 50.0f));
+		} else {
+			resizingBrush = false;
 		}
 		return;
 	}
 	if (shift && space && !ctrl) {
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-			Vector2 pos1 = { prevMousePos.x - GetScreenWidth() / 2.0f, prevMousePos.y - GetScreenHeight() / 2.0f };
-			Vector2 pos2 = { mousePos.x - GetScreenWidth() / 2.0f, mousePos.y - GetScreenHeight() / 2.0f };
+		static bool rotatingCanvas = false;
+		static float lastRotationAngle = 0.0f;
 
-			float angleDelta = Vector2Angle(pos1, pos2);
-				rotation += angleDelta;
+		if (pointerDown) {
+			float currentAngle = AngleFromScreenCenter(mousePos);
+
+			if (!rotatingCanvas || pointerPressed) {
+				lastRotationAngle = currentAngle;
+				rotatingCanvas = true;
+			} else {
+				rotation += NormalizeAngleDelta(currentAngle - lastRotationAngle);
+				lastRotationAngle = currentAngle;
+			}
+		} else {
+			rotatingCanvas = false;
 		}
+
+		return;
 	}
 
 	if(IsKeyPressed(KEY_LEFT_ALT)){
@@ -381,7 +473,7 @@ void Canvas::Update() {
 		if (temp.a != 0)
 			previewClr = temp;
 
-		if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+		if (pointerReleased) {
 			clr = previewClr;
 		}
 		return;
@@ -479,7 +571,7 @@ void Canvas::Update() {
 			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 			save();
 		}
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+		if (pointerPressed) {
 			SetWindowTitle(TextFormat("myCanvas | %s (*)", fileName.c_str()));
 			if(CheckCollisionPointRec(mousePos, colorPickerBounds)){
 				isColorPicking = true;
@@ -521,7 +613,7 @@ void Canvas::Update() {
 				redo.pop_back();
 			}
 		}
-		if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+		if(pointerDown) {
 			if(isColorPicking)
 				return;
 
@@ -532,7 +624,7 @@ void Canvas::Update() {
 				draw_line(prevCanvasMouse, currentCanvasMouse);
 			}
 			mouseState = HELD;
-		} else if(IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+		} else if(pointerReleased) {
 			if(isColorPicking){
 				if(!contains(colorQueue, clr)){
 					colorQueue.push_front(clr);
@@ -554,7 +646,6 @@ void Canvas::Render() {
     for(auto& l : layers) {
         BeginBlendMode(l.blendingMode);
 
-        // Flip Y for texture mode rendering
         Rectangle source = { 0, 0, (float)width, -(float)height };
         if (isMirror) source.width *= -1;
 
@@ -565,9 +656,6 @@ void Canvas::Render() {
             (float)height * scale
         };
 
-        // The 'origin' is the offset from the dest.x/y to the pivot point.
-        // To rotate around the screen center, but keep the canvas correctly offset,
-        // we calculate the vector from the screen center to where the canvas top-left should be.
         Vector2 origin = {
             screenCenter.x - canvasPos.x,
             screenCenter.y - canvasPos.y
@@ -644,14 +732,14 @@ void Canvas::Render() {
 
 
 	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	if(CheckCollisionPointRec(GetMousePosition(), colorPickerBounds) || isColorPicking){
-		DrawCircleV(GetMousePosition(), 1.0f*scale, clr);
+	if(CheckCollisionPointRec(GetMousePos(), colorPickerBounds) || isColorPicking){
+		DrawCircleV(GetMousePos(), 1.0f*scale, clr);
 		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
-		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f)-1.0f, (int)GetMousePosition().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
-		DrawRectangle((int)GetMousePosition().x - (smaller/2.0f), (int)GetMousePosition().y - (smaller*1.5f), smaller, smaller, previewClr);
+		DrawRectangle((int)GetMousePos().x - (smaller/2.0f)-1.0f, (int)GetMousePos().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
+		DrawRectangle((int)GetMousePos().x - (smaller/2.0f), (int)GetMousePos().y - (smaller*1.5f), smaller, smaller, previewClr);
 	}else{
-		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
-		DrawCircleLinesV(GetMousePosition(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
+		DrawCircleLinesV(GetMousePos(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
+		DrawCircleLinesV(GetMousePos(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
 	}
 
 	EndBlendMode();
