@@ -218,9 +218,7 @@ bool InitSDLTabletInput(void* nativeWindowHandle)
 void PumpSDLTabletInput()
 {
     if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) != 0) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-        }
+        SDL_PumpEvents();
     }
 
 #if defined(__linux__)
