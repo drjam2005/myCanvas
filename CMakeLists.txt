@@ -63,5 +63,7 @@ elseif(UNIX)
         m
         pthread
         dl
+		X11
+		Xi
     )
 endif()

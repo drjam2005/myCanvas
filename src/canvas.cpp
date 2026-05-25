@@ -295,6 +295,10 @@ void Canvas::Update() {
 				break;
 		}
 	}
+	float tabletPressure = 1.0f;
+	if (GetLatestTabletPressure(&tabletPressure)) {
+		pressure = tabletPressure;
+	}
 
     Vector2 mousePos = GetMousePos();
 	bool pointerPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || penPressedThisFrame;

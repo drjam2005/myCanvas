@@ -29,9 +29,7 @@ int main(int argc, char** argv){
 	SetTraceLogLevel(LOG_NONE);
 	SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT );
 	InitWindow(width, height, "myCanvas");
-	if (!SDL_AddEventWatch(WatchSDLEvent, nullptr)) {
-		std::cout << "SDL_AddEventWatch failed: " << SDL_GetError() << '\n';
-	}
+	InitSDLTabletInput(GetWindowHandle());
 	HideCursor();
 
 	Canvas canvas;
@@ -39,6 +37,7 @@ int main(int argc, char** argv){
 	//SetExitKey(KEY_NULL);
 	
 	while(!WindowShouldClose()){
+		PumpSDLTabletInput();
 		canvas.Update();
 
 		BeginDrawing();
@@ -49,6 +48,7 @@ int main(int argc, char** argv){
 
 		EndDrawing();
 	}
+	ShutdownSDLTabletInput();
 	CloseWindow();
 	return 0;
 }
