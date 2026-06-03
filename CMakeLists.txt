@@ -10,6 +10,10 @@ set(exec myCanvas)
 set(src
     src/main.cpp
     src/canvas.cpp
+    src/helpers.cpp
+	src/canvas_misc.cpp
+    src/canvas_update.cpp
+    src/canvas_render.cpp
     src/SDLHandler.cpp
 )
 

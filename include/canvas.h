@@ -71,7 +71,7 @@ private:
 
     Color clr;
     Color previewClr;
-	char transparency;
+	unsigned char transparency;
     size_t selectedLayer;
 public:
     Canvas(int width, int height, size_t maxLayers, std::string fileName);
@@ -79,7 +79,6 @@ public:
 
     void Update();
     void Render();
-
 private:
 	Color pick_color(Vector2 pos);
 	Vector2 screen_to_canvas(Vector2 pos);
@@ -89,9 +88,22 @@ private:
     void draw_circle(Vector2 pos);
     void draw_line(Vector2 v1, Vector2 v2);
 
-
+	// misc
 	void save_to_png();
 	void save();
+	bool load(std::string fileName);
+
+	// Update Stuff
+	bool penPressedThisFrame = false;
+	bool penReleasedThisFrame = false;
+
+	bool pointerPressed = false;
+	bool pointerDown = false;
+	bool pointerReleased = false;
+
+	bool handle_pen_events();
+	bool handle_key_events();
+	bool handle_tool_input();
 };
 
-#endif
+#endif // CANVAS_H

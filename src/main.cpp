@@ -3,7 +3,6 @@
 #include <SDL3/SDL_hints.h>
 #include <cstring>
 #include <canvas.h>
-#include <iostream>
 #include <SDLHandler.h>
 
 int main(int argc, char** argv){
@@ -21,13 +20,19 @@ int main(int argc, char** argv){
         } else if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
             height = atoi(argv[i + 1]);
             i++;
+        } else if (strcmp(argv[i], "--help") == 0) {
+            printf("Usage:\n");
+            printf("    ./myCanvas\n");
+            printf("    ./myCanvas -w <width> -h <height>\n");
+            printf("    ./myCanvas -f <fileName>\n");
+			return 0;
         } else {
             printf("Unknown argument: %s\n", argv[i]);
         }
     }
 
 	SetTraceLogLevel(LOG_NONE);
-	SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT );
+	SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE );
 	InitWindow(width, height, "myCanvas");
 	InitSDLTabletInput(GetWindowHandle());
 	HideCursor();
