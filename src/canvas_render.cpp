@@ -3,10 +3,12 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
+#include "rlgl.h"
+
 #include "canvas.h"
 #include "helpers.h"
 
-void Canvas::Render() {
+void Canvas::render_layers(){
 	Vector2 screenCenter = { (float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f };
     for(auto& l : layers) {
         BeginBlendMode(l.blendingMode);
@@ -37,7 +39,9 @@ void Canvas::Render() {
 
         EndBlendMode();
     }
+}
 
+void Canvas::render_color_picker(){
 	float cWidth = colorPickerRec.width / 6.0f;
 	float padding = cWidth / 5.0f;
 	size_t cols = 5;
@@ -68,8 +72,33 @@ void Canvas::Render() {
 		}
 	}
 
-	DrawTextContrast("Layers:", 15, 20, 30, WHITE);
+	BeginBlendMode(BLEND_SUBTRACT_COLORS);
+		if(CheckCollisionPointRec(GetMousePos(), colorPickerBounds) || isColorPicking){
+			DrawCircleV(GetMousePos(), 1.0f*scale, clr);
+			float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
+			DrawRectangle((int)GetMousePos().x - (smaller/2.0f)-1.0f, (int)GetMousePos().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
+			DrawRectangle((int)GetMousePos().x - (smaller/2.0f), (int)GetMousePos().y - (smaller*1.5f), smaller, smaller, previewClr);
+		}else{
+			DrawCircleLinesV(GetMousePos(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
+			DrawCircleLinesV(GetMousePos(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
+		}
+	EndBlendMode();
 	
+	float pickerBaseSize = fmax(500.0f, fmin(GetScreenWidth(), GetScreenHeight()));
+	float pickerSize = pickerBaseSize * 0.2f;
+	colorPickerRec = {
+		GetScreenWidth() - (pickerBaseSize * 0.3f),
+		pickerBaseSize * 0.1f,
+		pickerSize,
+		pickerSize
+	};
+	colorPickerBounds = colorPickerRec;
+	colorPickerBounds.width += 35;
+
+}
+
+void Canvas::render_layer_ui(){
+	DrawTextContrast("Layers:", 15, 20, 30, WHITE);
 	for(int i = layers.size()-1, y = 0; i >= 0; i--, y++){
 		char blend = 'A';
 		switch(layers[i].blendingMode){
@@ -92,32 +121,4 @@ void Canvas::Render() {
 	}else
 		DrawTextContrast(TextFormat("Mirrored: False"), 20, GetScreenHeight()-100.0f, 20, WHITE);
 	GuiColorPicker(colorPickerRec, "Colors", &clr);
-	
-
-
-
-	BeginBlendMode(BLEND_SUBTRACT_COLORS);
-	if(CheckCollisionPointRec(GetMousePos(), colorPickerBounds) || isColorPicking){
-		DrawCircleV(GetMousePos(), 1.0f*scale, clr);
-		float smaller = fmax(20.0f, fmin(GetScreenWidth(), GetScreenHeight())*0.1f);
-		DrawRectangle((int)GetMousePos().x - (smaller/2.0f)-1.0f, (int)GetMousePos().y - (smaller*1.5f)-1.0f, smaller+2.0f, smaller+2.0f, BLACK);
-		DrawRectangle((int)GetMousePos().x - (smaller/2.0f), (int)GetMousePos().y - (smaller*1.5f), smaller, smaller, previewClr);
-	}else{
-		DrawCircleLinesV(GetMousePos(), (scale)*(isBrush ? brushSize : eraserSize), WHITE);
-		DrawCircleLinesV(GetMousePos(), (scale)*(isBrush ? brushSize : eraserSize) - 1.0f, BLACK);
-	}
-
-	EndBlendMode();
-
-	
-	float pickerBaseSize = fmax(500.0f, fmin(GetScreenWidth(), GetScreenHeight()));
-	float pickerSize = pickerBaseSize * 0.2f;
-	colorPickerRec = {
-		GetScreenWidth() - (pickerBaseSize * 0.3f),
-		pickerBaseSize * 0.1f,
-		pickerSize,
-		pickerSize
-	};
-	colorPickerBounds = colorPickerRec;
-	colorPickerBounds.width += 35;
 }

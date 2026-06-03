@@ -88,10 +88,14 @@ private:
     void draw_circle(Vector2 pos);
     void draw_line(Vector2 v1, Vector2 v2);
 
+	// startup
+	void handle_file_loading();
+	void handle_window();
+	bool load(std::string fileName);
+
 	// misc
 	void save_to_png();
 	void save();
-	bool load(std::string fileName);
 
 	// Update Stuff
 	bool penPressedThisFrame = false;
@@ -104,6 +108,11 @@ private:
 	bool handle_pen_events();
 	bool handle_key_events();
 	bool handle_tool_input();
+
+	// Rendering Stuff
+	void render_layers();
+	void render_color_picker();
+	void render_layer_ui();
 };
 
 #endif // CANVAS_H

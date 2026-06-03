@@ -69,7 +69,6 @@ bool Canvas::handle_pen_events(){
 	pointerPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || penPressedThisFrame;
 	pointerDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || isPenDown;
 	pointerReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || penReleasedThisFrame;
-	prevMousePos = GetMousePos();
 	return handled;
 }
 
@@ -89,6 +88,7 @@ bool Canvas::handle_key_events(){
 			Vector2 rotatedDelta = Vector2Rotate(mouseDelta, -rotation);
 			canvasPos.x += rotatedDelta.x;
 			canvasPos.y += rotatedDelta.y;
+			prevMousePos = GetMousePos();
 		}
 		return true;
 	}
