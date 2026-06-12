@@ -35,7 +35,7 @@ if(WIN32)
 
     target_compile_definitions(${exec} PRIVATE SDL_STATIC_LIB)
     target_link_libraries(${exec} PRIVATE
-        raylib
+        libraylib.a
 		SDL3
 		m
 		hid
@@ -62,7 +62,7 @@ elseif(UNIX)
 		${CMAKE_SOURCE_DIR}/vendor/SDL/unix/include/
 	)
     target_link_libraries(${exec} PRIVATE
-        raylib
+        libraylib.a
         SDL3
         m
         pthread

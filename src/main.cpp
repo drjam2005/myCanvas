@@ -2,8 +2,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_hints.h>
 #include <cstring>
-#include <canvas.h>
-#include <SDLHandler.h>
+
+#include "canvas.h"
+#include "SDLHandler.h"
 
 int main(int argc, char** argv){
 	std::string fileName = "";
@@ -37,21 +38,22 @@ int main(int argc, char** argv){
 	InitSDLTabletInput(GetWindowHandle());
 	HideCursor();
 
-	Canvas canvas;
-	canvas = Canvas(width, height, 16, fileName);
-	//SetExitKey(KEY_NULL);
-	
-	while(!WindowShouldClose()){
-		PumpSDLTabletInput();
-		canvas.Update();
+	{
+		Canvas canvas(width, height, 16, fileName);
+		//SetExitKey(KEY_NULL);
+		
+		while(!WindowShouldClose()){
+			PumpSDLTabletInput();
+			canvas.Update();
 
-		BeginDrawing();
-		ClearBackground(DARKGRAY);
-		DrawFPS(20, 20);
+			BeginDrawing();
+			ClearBackground(DARKGRAY);
+			DrawFPS(20, 20);
 
-		canvas.Render();
+			canvas.Render();
 
-		EndDrawing();
+			EndDrawing();
+		}
 	}
 	ShutdownSDLTabletInput();
 	CloseWindow();

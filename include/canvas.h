@@ -34,8 +34,40 @@ struct Layer {
 		EndTextureMode();
     }
 
+	Layer(const Layer&) = delete;
+	Layer& operator=(const Layer&) = delete;
+
+	Layer(Layer&& other) noexcept
+		: width(other.width),
+		  height(other.height),
+		  opacity(other.opacity),
+		  tex(other.tex),
+		  blendingMode(other.blendingMode)
+	{
+		other.tex = {};
+	}
+
+	Layer& operator=(Layer&& other) noexcept
+	{
+		if (this != &other) {
+			if (tex.id != 0) {
+				UnloadRenderTexture(tex);
+			}
+
+			width = other.width;
+			height = other.height;
+			opacity = other.opacity;
+			tex = other.tex;
+			blendingMode = other.blendingMode;
+			other.tex = {};
+		}
+		return *this;
+	}
+
     ~Layer() { 
-		UnloadRenderTexture(tex);
+		if (tex.id != 0) {
+			UnloadRenderTexture(tex);
+		}
 	}
 };
 
@@ -76,6 +108,8 @@ private:
 public:
     Canvas(int width, int height, size_t maxLayers, std::string fileName);
 	Canvas() {}
+	Canvas(const Canvas&) = delete;
+	Canvas& operator=(const Canvas&) = delete;
 
     void Update();
     void Render();

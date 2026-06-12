@@ -159,6 +159,12 @@ void Canvas::handle_file_loading(){
 }
 
 void Canvas::handle_window(){
+	pressure = 1.0f;
+	canvasDimensions.x = 0;
+	canvasDimensions.y = 0;
+	canvasDimensions.width = width;
+	canvasDimensions.height = height;
+
 	int monitor = GetCurrentMonitor();
 	int monitorWidth  = GetMonitorWidth(monitor);
 	int monitorHeight = GetMonitorHeight(monitor);

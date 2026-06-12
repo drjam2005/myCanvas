@@ -12,16 +12,8 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
       fileName(fileName), clr(BLACK), isBrush(true), scale(1.0f),
 	  isMirror(false), isColorPicking(false)
 {
-	pressure = 1.0f;
-	canvasDimensions.x = 0;
-	canvasDimensions.y = 0;
-	canvasDimensions.width = width;
-	canvasDimensions.height = height;
-
-	// file loading
-	handle_file_loading();
-	// set window stuff hmhmhmm
-	handle_window();
+	handle_file_loading(); // file loading
+	handle_window(); // set window stuff hmhmhmm
 }
 
 void Canvas::Update() {

@@ -311,6 +311,7 @@ bool Canvas::handle_key_events(){
 }
 
 bool Canvas::handle_tool_input(){
+
 	bool ctrl  = IsKeyDown(KEY_LEFT_CONTROL);
 	bool shift = IsKeyDown(KEY_LEFT_SHIFT);
 	bool space = IsKeyDown(KEY_SPACE);
