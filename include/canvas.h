@@ -100,6 +100,7 @@ private:
 	bool isPenDown = false;
 	bool isMirror;
 	bool isColorPicking = true;
+	bool isUiHidden = false;
 
     Color clr;
     Color previewClr;

@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_hints.h>
 #include <cstring>
+#include <string>
 
 #include "canvas.h"
 #include "SDLHandler.h"
@@ -48,9 +49,10 @@ int main(int argc, char** argv){
 
 			BeginDrawing();
 			ClearBackground(DARKGRAY);
-			DrawFPS(20, 20);
 
 			canvas.Render();
+
+			DrawFPS(20, 20);
 
 			EndDrawing();
 		}

@@ -78,6 +78,9 @@ bool Canvas::handle_key_events(){
 	bool space = IsKeyDown(KEY_SPACE);
 	bool alt   = IsKeyDown(KEY_LEFT_ALT);
 
+	if(IsKeyPressed(KEY_TAB))
+		isUiHidden = !isUiHidden;
+
 	if (space && !ctrl && !shift) {
 		if (pointerPressed) {
 			prevMousePos = GetMousePos();

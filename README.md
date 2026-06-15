@@ -66,7 +66,7 @@ cmake --build build-vendor --target SDL3-static raylib
 
 ## BINDINGS
 ### brushes
-- `LeftMouseDown` = `Draw`
+- `LeftMouseDown` | `PenTipDown` = `Draw`
 - `Shift + LeftMouseDown + (Move Mouse Left/Right)` = `Resize Brush`
 - `E` = `Toggle Eraser/Brush`
 - `Ctrl+1 -> Ctrl+4` = Transparency from `25% -> 100%`
@@ -85,3 +85,4 @@ cmake --build build-vendor --target SDL3-static raylib
 - `Ctrl+Z` = `Undo` (max of 10 undos)
 - `Ctrl+Shift+Z` = `Redo`
 - `Enter` = `Save`
+- `Tab` = Toggle Ui visibility

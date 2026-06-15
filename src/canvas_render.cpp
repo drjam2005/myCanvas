@@ -42,6 +42,9 @@ void Canvas::render_layers(){
 }
 
 void Canvas::render_color_picker(){
+
+	GuiColorPicker(colorPickerRec, "Colors", &clr);
+
 	float cWidth = colorPickerRec.width / 6.0f;
 	float padding = cWidth / 5.0f;
 	size_t cols = 5;
@@ -120,5 +123,4 @@ void Canvas::render_layer_ui(){
 		DrawTextContrast(TextFormat("Mirrored: True"), 20, GetScreenHeight()-100.0f, 20, GREEN);
 	}else
 		DrawTextContrast(TextFormat("Mirrored: False"), 20, GetScreenHeight()-100.0f, 20, WHITE);
-	GuiColorPicker(colorPickerRec, "Colors", &clr);
 }

@@ -54,16 +54,18 @@ void Canvas::save_to_png(){
 	RenderTexture finalTex = LoadRenderTexture(width, height);
 	BeginTextureMode(finalTex);
 	ClearBackground(BLANK);
+
 	for(auto& l : layers) {
 		BeginBlendMode(l.blendingMode);
 
-		Rectangle source = { 0, 0, (float)width, -(float)height};
+		Rectangle source = { 0, 0, (float)width, (float)height};
 		Rectangle dest = { 0, 0,   (float)width,  (float)height};
 
 		DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
 
 		EndBlendMode();
 	}
+
 	EndTextureMode();
 	Image finalImage = LoadImageFromTexture(finalTex.texture);
 	std::string finalFilePath = fileName + ".png";
