@@ -7,36 +7,22 @@
 #include "canvas.h"
 #include "SDLHandler.h"
 
-int main(int argc, char** argv){
-	std::string fileName = "";
-    int width = 800;
-    int height = 600;
+int width = 800;
+int height = 600;
+std::string fileName = "";
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-            fileName = argv[i + 1];
-            i++;
-        } else if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
-            width = atoi(argv[i + 1]);
-            i++;
-        } else if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
-            height = atoi(argv[i + 1]);
-            i++;
-        } else if (strcmp(argv[i], "--help") == 0) {
-            printf("Usage:\n");
-            printf("    ./myCanvas\n");
-            printf("    ./myCanvas -w <width> -h <height>\n");
-            printf("    ./myCanvas -f <fileName>\n");
-			return 0;
-        } else {
-            printf("Unknown argument: %s\n", argv[i]);
-        }
-    }
+bool handleArgs(int argc, char** argv);
+
+int main(int argc, char** argv){
+
+	if(!handleArgs(argc, argv))
+		return 1;
 
 	SetTraceLogLevel(LOG_NONE);
 	SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE );
 	InitWindow(width, height, "myCanvas");
 	InitSDLTabletInput(GetWindowHandle());
+
 	HideCursor();
 
 	{
@@ -60,4 +46,28 @@ int main(int argc, char** argv){
 	ShutdownSDLTabletInput();
 	CloseWindow();
 	return 0;
+}
+
+bool handleArgs(int argc, char** argv) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
+            fileName = argv[i + 1];
+            i++;
+        } else if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
+            width = atoi(argv[i + 1]);
+            i++;
+        } else if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
+            height = atoi(argv[i + 1]);
+            i++;
+        } else if (strcmp(argv[i], "--help") == 0) {
+            printf("Usage:\n");
+            printf("    ./myCanvas\n");
+            printf("    ./myCanvas -w <width> -h <height>\n");
+            printf("    ./myCanvas -f <fileName>\n");
+			return false;
+        } else {
+            printf("Unknown argument: %s\n", argv[i]);
+        }
+    }
+	return true;
 }
