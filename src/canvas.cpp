@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <cstring>
-#include <cmath>
 
 #include "canvas.h"
 #include "raylib.h"
@@ -17,9 +16,10 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 }
 
 void Canvas::Update() {
-	pointerPos = GetMousePosition();
+	if (!isPenInProximity)
+		pointerPos = GetMousePosition();
 
-	if (handle_pen_events()) return;
+	handle_pen_events();
 	if (handle_key_events()) return;
 	
 	handle_tool_input();

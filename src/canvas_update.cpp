@@ -15,6 +15,7 @@ bool Canvas::handle_pen_events(){
 	for (const SDL_Event& e : DrainPenEvents()) {
 		switch(e.type){
 			case SDL_EVENT_PEN_PROXIMITY_IN: 
+				pointerPos = { e.ptouch.x, e.ptouch.y };
 				isPenInProximity = true;
 				handled = true;
 				break;
@@ -66,9 +67,17 @@ bool Canvas::handle_pen_events(){
 		handled = true;
 	}
 
-	pointerPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || penPressedThisFrame;
-	pointerDown = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || isPenDown;
-	pointerReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || penReleasedThisFrame;
+	if (isPenInProximity) {
+		pointerPressed  = penPressedThisFrame;
+		pointerDown     = isPenDown;
+		pointerReleased = penReleasedThisFrame;
+	} else {
+		pointerPressed  = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+		pointerDown     = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+		pointerReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+		pressure = 1.0f;
+	}
+
 	return handled;
 }
 

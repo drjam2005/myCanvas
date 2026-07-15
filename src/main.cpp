@@ -24,24 +24,21 @@ int main(int argc, char** argv){
 	InitSDLTabletInput(GetWindowHandle());
 
 	HideCursor();
-
-	{
-		Canvas canvas(width, height, 16, fileName);
-		//SetExitKey(KEY_NULL);
+	Canvas canvas(width, height, 16, fileName);
+	//SetExitKey(KEY_NULL);
 		
-		while(!WindowShouldClose()){
-			PumpSDLTabletInput();
-			canvas.Update();
+	while(!WindowShouldClose()){
+		PumpSDLTabletInput();
+		canvas.Update();
 
-			BeginDrawing();
-			ClearBackground(DARKGRAY);
+		BeginDrawing();
+		ClearBackground(DARKGRAY);
 
-			canvas.Render();
+		canvas.Render();
 
-			DrawFPS(20, 20);
+		DrawFPS(20, 20);
 
-			EndDrawing();
-		}
+		EndDrawing();
 	}
 	ShutdownSDLTabletInput();
 	CloseWindow();
