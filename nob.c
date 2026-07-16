@@ -70,53 +70,54 @@ buildScripts generateBuildScripts(const char* sources[], size_t sourcesCount, in
 		obj.sourcePath = sourcePath;
 		obj.cmd = cmd;
 
-		da_append(&objects, obj);
+		nob_da_append(&objects, obj);
 	}
 
 	return objects;
 }
-
 
 buildObjects executeBuildScripts(buildScripts scripts, bool async) {
 	buildObjects objects = {0};
 
-	da_foreach(buildScript, script, &scripts) {
-		nob_log(NOB_INFO, "Building Object: %s", script->buildPath);
-		if(async){
-			if(!nob_cmd_run(&script->cmd, .async=&procs)) {
-				nob_log(NOB_ERROR, "Failed to build %s", script->buildPath);
-				return objects;
+	nob_da_foreach(buildScript, script, &scripts) {
+		int rebuild_is_needed = nob_needs_rebuild(script->buildPath, &script->sourcePath, 1);
+		if (rebuild_is_needed) {
+			nob_log(NOB_INFO, "Building Object: %s", script->buildPath);
+			if(async){
+				if(!nob_cmd_run(&script->cmd, .async=&procs)) {
+					nob_log(NOB_ERROR, "Failed to build %s", script->buildPath);
+					return objects;
+				}
+			}else{
+				if(!nob_cmd_run(&script->cmd)) {
+					nob_log(NOB_ERROR, "Failed to build %s", script->buildPath);
+					return objects;
+				}
 			}
-		}else{
-			if(!nob_cmd_run(&script->cmd)) {
-				nob_log(NOB_ERROR, "Failed to build %s", script->buildPath);
-				return objects;
-			}
+		} else {
+			nob_log(NOB_INFO, "%s is up to date, skipping", script->buildPath);
 		}
 
 		buildObject obj = {0};
 		obj.buildPath = script->buildPath;
-
-		da_append(&objects, obj);
+		nob_da_append(&objects, obj);
 	}
-
 
 	return objects;
 }
-
 
 bool compileObjects(buildObjects objects, linkerFlags links, const char* outputExec) {
 	Nob_Cmd cmd = {0};
 
 	if(!objects.count){
-		nob_log(WARNING, "No input files for compilation!");
+		nob_log(NOB_WARNING, "No input files for compilation!");
 		return false;
 	}
 	
 	nob_cmd_append(&cmd, COMPILER);
 	nob_cc_output(&cmd, outputExec);
 
-	da_foreach(buildObject, obj, &objects) {
+	nob_da_foreach(buildObject, obj, &objects) {
 		nob_cc_inputs(&cmd, obj->buildPath);
 	}
 
@@ -127,6 +128,7 @@ bool compileObjects(buildObjects objects, linkerFlags links, const char* outputE
 	return nob_cmd_run(&cmd);
 }
 
+// Generated from Claude
 void json_escape_fputs(const char *s, FILE *f)
 {
     for (; *s; ++s) {
@@ -140,6 +142,7 @@ void json_escape_fputs(const char *s, FILE *f)
     }
 }
 
+// Generated from Claude
 void json_escape_path_fputs(const char *s, FILE *f)
 {
     for (; *s; ++s) {
@@ -149,12 +152,13 @@ void json_escape_path_fputs(const char *s, FILE *f)
     }
 }
 
+// Generated from Claude
 bool generate_compile_commands(buildScripts scripts)
 {
-    FILE *f = fopen("build/compile_commands.json", "w");
+    FILE *f = fopen("compile_commands.json", "w");
     if (!f) return false;
 
-    const char *cwd = nob_get_current_dir_temp(); // hoisted, doesn't change per-iteration
+    const char *cwd = nob_get_current_dir_temp();
 
     fprintf(f, "[\n");
 
@@ -182,8 +186,6 @@ bool generate_compile_commands(buildScripts scripts)
     return true;
 }
 
-
-
 int main(int argc, char** argv){
 	NOB_GO_REBUILD_URSELF(argc, argv);
 	if(!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
@@ -198,7 +200,6 @@ int main(int argc, char** argv){
 			return 1;
 		}
 	}
-
 
 	const char* sourcesToBuild[] = {
 		"src/main.cpp",
