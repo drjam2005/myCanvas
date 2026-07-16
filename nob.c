@@ -54,6 +54,8 @@ buildScripts generateBuildScripts(const char* sources[], size_t sourcesCount, in
 	for(size_t i = 0; i < sourcesCount; ++i) {
 		Nob_Cmd cmd = {0};
 		nob_cmd_append(&cmd, COMPILER);
+		nob_cmd_append(&cmd, "-g");
+		nob_cmd_append(&cmd, "-O0");
 		
 		const char* sourcePath = sources[i];
 		const char* buildPath = nob_temp_sprintf(BUILD_FOLDER"%s.o", nob_path_name(sources[i]));
@@ -124,7 +126,7 @@ bool compileObjects(buildObjects objects, linkerFlags links, const char* outputE
 	for(size_t i = 0; i < links.count; ++i) {
 		nob_cmd_append(&cmd, links.links[i]);
 	}
-
+		
 	return nob_cmd_run(&cmd);
 }
 
@@ -155,7 +157,7 @@ void json_escape_path_fputs(const char *s, FILE *f)
 // Generated from Claude
 bool generate_compile_commands(buildScripts scripts)
 {
-    FILE *f = fopen("compile_commands.json", "w");
+    FILE *f = fopen(BUILD_FOLDER"compile_commands.json", "w");
     if (!f) return false;
 
     const char *cwd = nob_get_current_dir_temp();
@@ -191,9 +193,12 @@ int main(int argc, char** argv){
 	if(!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
 	bool asnyc = false;
+	bool run = false;
 
 	for (int i = 1; i < argc; ++i) {
-		if (strcmp(argv[i], "-j") == 0) {
+		if (strcmp(argv[i], "run") == 0) {
+			run = true;
+		} else if (strcmp(argv[i], "-j") == 0) {
 			asnyc = true;
 		} else {
 			nob_log(NOB_ERROR, "Unknown flag: %s", argv[i]);
@@ -208,6 +213,7 @@ int main(int argc, char** argv){
 		"src/canvas_render.cpp",
 		"src/canvas_update.cpp",
 		"src/helpers.cpp",
+		"src/events.cpp",
 		"src/SDLHandler.cpp"
 	};
 
@@ -255,8 +261,13 @@ int main(int argc, char** argv){
 	if(asnyc)
 		nob_procs_wait(procs);
 
-	if(compileObjects(objects, links, OUTPUT_EXEC))
+	if(compileObjects(objects, links, OUTPUT_EXEC)){
 		nob_log(NOB_INFO, "Compilation Succesful!");
-	else
+		if(run){
+			Nob_Cmd cmd = {0};
+			nob_cmd_append(&cmd, OUTPUT_EXEC);
+			nob_cmd_run(&cmd);
+		}
+	} else
 		nob_log(NOB_ERROR, "Compilation Unsuccesful!");
 }

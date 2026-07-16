@@ -1,4 +1,6 @@
+#include "raylib.h"
 #include <cmath>
+#include <algorithm>
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -101,6 +103,18 @@ void Canvas::render_color_picker(){
 }
 
 void Canvas::render_layer_ui(){
+	auto events = bus.getEvents();
+	for(auto event : events) {
+		if (event.type == EVENT_NOTIFY) {
+			messageQueue.push_back(
+					(NotifMessage) {
+						.message = event.notify_message,
+						.lifeTime = 5.0f
+					}
+				);
+		}
+	}
+
 	DrawTextContrast("Layers:", 15, 20, 30, WHITE);
 	for(int i = layers.size()-1, y = 0; i >= 0; i--, y++){
 		char blend = 'A';
@@ -123,4 +137,35 @@ void Canvas::render_layer_ui(){
 		DrawTextContrast(TextFormat("Mirrored: True"), 20, GetScreenHeight()-100.0f, 20, GREEN);
 	}else
 		DrawTextContrast(TextFormat("Mirrored: False"), 20, GetScreenHeight()-100.0f, 20, WHITE);
+
+	// messages drawing
+	messageQueue.erase(std::remove_if( 
+				messageQueue.begin(), messageQueue.end(), [](NotifMessage& msg) { return msg.lifeTime <= 0.0f; }
+		), messageQueue.end());
+
+	for(NotifMessage& message : messageQueue) {
+		message.lifeTime -= GetFrameTime();
+	}
+	
+	float notifYPos = 10.0f;
+	size_t index = 0;
+
+	for(NotifMessage& message : messageQueue) {
+
+		Vector2 messageDimensions = MeasureTextEx(GetFontDefault(), message.message.c_str(), 30, 5.0f);
+
+		messageDimensions.x = std::max(messageDimensions.x, 50.0f);
+		messageDimensions.y += 15;
+		Rectangle rec = {
+			.x = GetScreenWidth() - messageDimensions.x,
+			.y = notifYPos,
+			.width = messageDimensions.x,
+			.height = messageDimensions.y,
+		};
+		DrawRectangleRec(rec, GRAY);
+		DrawRectangleLinesEx(rec, 5.0, BLACK);
+		DrawTextContrast(message.message.c_str(), rec.x+10.0, rec.y+7.5, 30, WHITE);
+
+		notifYPos += messageDimensions.y + 5;
+	}
 }

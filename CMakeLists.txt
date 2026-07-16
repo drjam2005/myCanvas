@@ -14,6 +14,7 @@ set(src
 	src/canvas_misc.cpp
     src/canvas_update.cpp
     src/canvas_render.cpp
+    src/events.cpp
     src/SDLHandler.cpp
 )
 

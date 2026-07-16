@@ -1,7 +1,7 @@
-#include <iostream>
 #include <fstream>
 #include <vector>
 
+#include "events.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -47,7 +47,12 @@ void Canvas::save(){
 		UnloadImageColors(colors);
 		UnloadImage(img);
 	}
-	std::cout << "Saved " << fileName << "!" << '\n';
+
+	bus.pushEvent((Event){
+		.type = EVENT_NOTIFY,
+		.notify_message = TextFormat("Saved %s!", fileName.c_str())
+	});
+
 }
 
 void Canvas::save_to_png(){
@@ -70,7 +75,11 @@ void Canvas::save_to_png(){
 	Image finalImage = LoadImageFromTexture(finalTex.texture);
 	std::string finalFilePath = fileName + ".png";
 	ExportImage(finalImage, finalFilePath.c_str());
-	std::cout << "Saved: " << finalFilePath << '\n';
+
+	bus.pushEvent((Event){
+		.type = EVENT_NOTIFY,
+		.notify_message = TextFormat("Saved to %s", finalFilePath.c_str())
+	});
 
 	UnloadImage(finalImage);
 	UnloadRenderTexture(finalTex);

@@ -5,6 +5,7 @@
 #include <string>
 #include <deque>
 #include "raylib.h"
+#include "events.h"
 #include <SDLHandler.h>
 
 enum MOUSE_STATE {
@@ -71,6 +72,11 @@ struct Layer {
 	}
 };
 
+struct NotifMessage {
+	std::string message;
+	float lifeTime = 0.0f;
+};
+
 class Canvas {
 private:
 	std::string fileName;
@@ -78,6 +84,9 @@ private:
 	std::deque<std::pair<size_t, Image>> undo;
 	std::deque<std::pair<size_t, Image>> redo;
 	std::deque<Color> colorQueue;
+	std::deque<NotifMessage> messageQueue;
+
+	EventBus bus;
 
     MOUSE_STATE mouseState;
     Vector2 prevMousePos = {-1, -1};

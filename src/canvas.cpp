@@ -28,8 +28,12 @@ void Canvas::Update() {
 
 void Canvas::Render() {
 	render_layers();
+
 	if(isUiHidden)
 		return;
+
 	render_color_picker();
 	render_layer_ui();
+
+	bus.emptyEvents();
 }
