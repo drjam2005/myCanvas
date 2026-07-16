@@ -5,9 +5,9 @@
 #define COMPILER "g++"
 #define BUILD_FOLDER "build/"
 #if defined(_WIN32)
-#define OUTPUT_EXEC "build/main.exe"
+#define OUTPUT_EXEC "build/myCanvas.exe"
 #elif defined(__linux__)
-#define OUTPUT_EXEC "build/main"
+#define OUTPUT_EXEC "build/myCanvas"
 #endif
 
 Procs procs = {0};
@@ -27,6 +27,7 @@ typedef struct {
 } includePaths;
 
 typedef struct {
+	const char* sourcePath;
 	const char* buildPath;
 	Nob_Cmd cmd;
 } buildScript;
@@ -66,6 +67,7 @@ buildScripts generateBuildScripts(const char* sources[], size_t sourcesCount, in
 
 		buildScript obj = {0};
 		obj.buildPath = buildPath;
+		obj.sourcePath = sourcePath;
 		obj.cmd = cmd;
 
 		da_append(&objects, obj);
@@ -77,6 +79,7 @@ buildScripts generateBuildScripts(const char* sources[], size_t sourcesCount, in
 
 buildObjects executeBuildScripts(buildScripts scripts, bool async) {
 	buildObjects objects = {0};
+
 	da_foreach(buildScript, script, &scripts) {
 		nob_log(NOB_INFO, "Building Object: %s", script->buildPath);
 		if(async){
@@ -104,8 +107,13 @@ buildObjects executeBuildScripts(buildScripts scripts, bool async) {
 
 bool compileObjects(buildObjects objects, linkerFlags links, const char* outputExec) {
 	Nob_Cmd cmd = {0};
+
+	if(!objects.count){
+		nob_log(WARNING, "No input files for compilation!");
+		return false;
+	}
+	
 	nob_cmd_append(&cmd, COMPILER);
-	// nob_cmd_append(&cmd, "-o", outputExec);
 	nob_cc_output(&cmd, outputExec);
 
 	da_foreach(buildObject, obj, &objects) {
@@ -118,6 +126,62 @@ bool compileObjects(buildObjects objects, linkerFlags links, const char* outputE
 
 	return nob_cmd_run(&cmd);
 }
+
+void json_escape_fputs(const char *s, FILE *f)
+{
+    for (; *s; ++s) {
+        switch (*s) {
+            case '"':  fputs("\\\"", f); break;
+            case '\\': fputs("\\\\", f); break;
+            case '\n': fputs("\\n", f);  break;
+            case '\t': fputs("\\t", f);  break;
+            default:   fputc(*s, f);
+        }
+    }
+}
+
+void json_escape_path_fputs(const char *s, FILE *f)
+{
+    for (; *s; ++s) {
+        char c = (*s == '\\') ? '/' : *s;
+        if (c == '"') fputs("\\\"", f);
+        else          fputc(c, f);
+    }
+}
+
+bool generate_compile_commands(buildScripts scripts)
+{
+    FILE *f = fopen("build/compile_commands.json", "w");
+    if (!f) return false;
+
+    const char *cwd = nob_get_current_dir_temp(); // hoisted, doesn't change per-iteration
+
+    fprintf(f, "[\n");
+
+    for (size_t i = 0; i < scripts.count; ++i) {
+        buildScript *script = &scripts.items[i];
+
+        fprintf(f, "  {\n    \"directory\": \"");
+        json_escape_fputs(cwd, f);
+        fprintf(f, "\",\n    \"file\": \"");
+        json_escape_fputs(script->sourcePath, f);
+        fprintf(f, "\",\n    \"arguments\": [");
+
+        for (size_t j = 0; j < script->cmd.count; ++j) {
+            if (j) fprintf(f, ", ");
+            fputc('"', f);
+            json_escape_fputs(script->cmd.items[j], f);
+            fputc('"', f);
+        }
+
+        fprintf(f, "]\n  }%s\n", i + 1 < scripts.count ? "," : "");
+    }
+
+    fprintf(f, "]\n");
+    fclose(f);
+    return true;
+}
+
 
 
 int main(int argc, char** argv){
@@ -135,7 +199,7 @@ int main(int argc, char** argv){
 		}
 	}
 
-	
+
 	const char* sourcesToBuild[] = {
 		"src/main.cpp",
 		"src/canvas.cpp",
@@ -165,28 +229,30 @@ int main(int argc, char** argv){
 	const char* toLink[] =
 	{
 #if defined(_WIN32)
-			"-Lvendor/raylib/windows/lib/", "-lraylib",
-			"-Lvendor/SDL/windows/lib/", "-lSDL3",
-			"-lm", "-lhid", "-lsetupapi", "-lwinmm", "-limm32",
-			"-lversion", "-lole32", "-loleaut32", "-luuid", "-ladvapi32",
-			"-luser32", "-lgdi32", "-lshell32",
+		"-Lvendor/raylib/windows/lib/", "-lraylib",
+		"-Lvendor/SDL/windows/lib/", "-lSDL3",
+		"-lm", "-lhid", "-lsetupapi", "-lwinmm", "-limm32",
+		"-lversion", "-lole32", "-loleaut32", "-luuid", "-ladvapi32",
+		"-luser32", "-lgdi32", "-lshell32",
 #elif defined(__linux__)
-			"-Lvendor/raylib/unix/lib/", "-l:libraylib.a",
-			"-Lvendor/SDL/unix/lib/", "-lSDL3"
-			"-lX11",
+		"-Lvendor/raylib/unix/lib/", "-l:libraylib.a",
+		"-Lvendor/SDL/unix/lib/", "-lSDL3",
+		"-lX11",
 #endif
 	};
-
 
 	linkerFlags links = {
 		.links = toLink,
 		.count = ARRAY_LEN(toLink)
 	};
 
-
 	buildScripts scripts = generateBuildScripts(sourcesToBuild, ARRAY_LEN(sourcesToBuild), includes);
+	generate_compile_commands(scripts);
+
 	buildObjects objects = executeBuildScripts(scripts, asnyc);
-	nob_procs_wait(procs);
+
+	if(asnyc)
+		nob_procs_wait(procs);
 
 	if(compileObjects(objects, links, OUTPUT_EXEC))
 		nob_log(NOB_INFO, "Compilation Succesful!");
