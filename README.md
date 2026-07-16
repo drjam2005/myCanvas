@@ -5,10 +5,9 @@ Fun little drawing side-project
 > [!WARNING]
 > VERY INCOMPLETE!!!
 
-
 > [!WARNING]
 > Dependencies (for building):
->- CMake
+>- CMake (optional, use Nob)
 >- C++ Compiler (ideally gcc)
 >- MinGW compiler (Windows)
 
@@ -22,46 +21,59 @@ cmake -S . -B build-vendor -DMYCANVAS_BUILD_VENDOR_LIBS=ON -DCMAKE_BUILD_TYPE=Re
 cmake --build build-vendor --target SDL3-static raylib
 ```
 
-## Building and Running
+## Building (Using CMake)
 -- Unix Systems:
 ```bash
-	$ mkdir build
-	$ cd build/
-	$ cmake ..
-	$ make
-```
-- Running:
-```
-	// running temporarily
-	$ ./myCanvas
-
-	// running with a file to load/save
-	$ ./myCanvas -f fileName
-
-	// running with window dimensoins (defaults: width = 800, height = 600)
-	$ ./myCanvas -w 1920 -h 1080
-
-	// running with window dimensoins and file to load/save
-	$ ./myCanvas -w 1920 -h 1080 -f fileName
+$ mkdir build
+$ cd build/
+$ cmake ..
+$ make
 ```
 -- Windows Systems:
 ```cmd
-	$ cmake -S . -B build -G "MinGW Makefiles"
-	$ cmake --build build
+$ cmake -S . -B build -G "MinGW Makefiles"
+$ cmake --build build
 ```
-- Running:
+## Building (Using Nob)
+-- Unix Systems:
+```bash
+$ cc nob.c -o nob
+$ ./nob -j
 ```
-	// running temporarily
-	$ myCanvas.exe
+-- Windows Systems:
+```cmd
+$ cc nob.c -o nob.exe
+$ ./nob.exe -j
+```
 
-	// running with a file to load/save
-	$ myCanvas.exe -f fileName
+## Running
+- Unix:
+```
+// running temporarily
+$ ./myCanvas
 
-	// running with window dimensoins (defaults: width = 800, height = 600)
-	$ myCanvas.exe -w 1920 -h 1080
+// running with a file to load/save
+$ ./myCanvas -f fileName
 
-	// running with window dimensoins and file to load/save
-	$ myCanvas.exe -w 1920 -h 1080 -f fileName
+// running with window dimensoins (defaults: width = 800, height = 600)
+$ ./myCanvas -w 1920 -h 1080
+
+// running with window dimensoins and file to load/save
+$ ./myCanvas -w 1920 -h 1080 -f fileName
+```
+- Windows:
+```
+// running temporarily
+$ myCanvas.exe
+
+// running with a file to load/save
+$ myCanvas.exe -f fileName
+
+// running with window dimensoins (defaults: width = 800, height = 600)
+$ myCanvas.exe -w 1920 -h 1080
+
+// running with window dimensoins and file to load/save
+$ myCanvas.exe -w 1920 -h 1080 -f fileName
 ```
 
 ## BINDINGS
