@@ -56,7 +56,9 @@ buildScripts generateBuildScripts(const char* sources[], size_t sourcesCount, in
 		
 		const char* sourcePath = sources[i];
 		const char* buildPath = nob_temp_sprintf(BUILD_FOLDER"%s.o", nob_path_name(sources[i]));
-		nob_cmd_append(&cmd, sourcePath, "-c", "-o", buildPath);
+		nob_cc_inputs(&cmd, sourcePath);
+		nob_cmd_append(&cmd, "-c");
+		nob_cc_output(&cmd, buildPath);
 
 		for(size_t j = 0; j < includes.count; ++j) {
 			nob_cmd_append(&cmd, includes.paths[j]);
@@ -103,10 +105,11 @@ buildObjects executeBuildScripts(buildScripts scripts, bool async) {
 bool compileObjects(buildObjects objects, linkerFlags links, const char* outputExec) {
 	Nob_Cmd cmd = {0};
 	nob_cmd_append(&cmd, COMPILER);
-	nob_cmd_append(&cmd, "-o", outputExec);
+	// nob_cmd_append(&cmd, "-o", outputExec);
+	nob_cc_output(&cmd, outputExec);
 
 	da_foreach(buildObject, obj, &objects) {
-		nob_cmd_append(&cmd, obj->buildPath);
+		nob_cc_inputs(&cmd, obj->buildPath);
 	}
 
 	for(size_t i = 0; i < links.count; ++i) {
@@ -186,7 +189,7 @@ int main(int argc, char** argv){
 	nob_procs_wait(procs);
 
 	if(compileObjects(objects, links, OUTPUT_EXEC))
-		nob_log(INFO, "Compilation Succesful!");
+		nob_log(NOB_INFO, "Compilation Succesful!");
 	else
-		nob_log(ERROR, "Compilation Unsuccesful!");
+		nob_log(NOB_ERROR, "Compilation Unsuccesful!");
 }
