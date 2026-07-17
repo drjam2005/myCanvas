@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+
 set(exec myCanvas)
 
 set(src
@@ -25,8 +28,7 @@ target_include_directories(${exec} PRIVATE
 )
 
 target_compile_options(${exec} PRIVATE
-	-O3
-	-static
+	-g
 )
 
 if(WIN32)

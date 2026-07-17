@@ -1,4 +1,5 @@
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 #include "events.h"
@@ -10,7 +11,7 @@
 
 // misc
 void Canvas::save(){
-	if (fileName == "") fileName = "myTemp";
+	if (fileName == "") fileName = "myTemp.mc";
 
 	std::ofstream file(fileName, std::ios::binary);
 	if (!file.is_open()) return;
@@ -73,7 +74,7 @@ void Canvas::save_to_png(){
 
 	EndTextureMode();
 	Image finalImage = LoadImageFromTexture(finalTex.texture);
-	std::string finalFilePath = fileName + ".png";
+	std::string finalFilePath = std::string(GetFileNameWithoutExt(fileName.c_str())) + ".png";
 	ExportImage(finalImage, finalFilePath.c_str());
 
 	bus.pushEvent((Event){
@@ -86,8 +87,10 @@ void Canvas::save_to_png(){
 }
 
 bool Canvas::load(std::string fileName) {
-	if(fileName.empty())
+	if(fileName.empty() || fileName == "") {
+		fileName = "myTemp.mc";
 		return false;
+	}
 
 	std::ifstream file(fileName, std::ios::binary);
 	if (file.is_open()) {
@@ -153,7 +156,6 @@ void Canvas::handle_file_loading(){
 		clr = colorQueue[0];
 		SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 	} else {
-		layers.clear(); 
 
 		create_layer(true);  
 		create_layer(false); 
@@ -281,4 +283,22 @@ void Canvas::draw_line(Vector2 canvasFrom, Vector2 canvasTo) {
 
 Vector2 Canvas::GetMousePos(){
 	return pointerPos;
+}
+
+void Canvas::handle_dropped_files() {
+	if(IsFileDropped()) {
+		FilePathList files = LoadDroppedFiles();
+		if(files.count >= 1) {
+			std::string droppedFile = files.paths[0];
+			if(IsFileExtension(droppedFile.c_str(), ".mc")) {
+				if(!isSaved) {
+					this->droppedFile = droppedFile;
+				}else {
+					fileName = droppedFile;
+					handle_file_loading();
+				}
+			}
+		}
+		UnloadDroppedFiles(files);
+	}
 }

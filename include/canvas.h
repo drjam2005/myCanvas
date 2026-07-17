@@ -80,6 +80,7 @@ struct NotifMessage {
 class Canvas {
 private:
 	std::string fileName;
+	std::string droppedFile;
     std::deque<Layer> layers;
 	std::deque<std::pair<size_t, Image>> undo;
 	std::deque<std::pair<size_t, Image>> redo;
@@ -110,6 +111,7 @@ private:
 	bool isMirror;
 	bool isColorPicking = true;
 	bool isUiHidden = false;
+	bool isSaved = false;
 
     Color clr;
     Color previewClr;
@@ -138,6 +140,7 @@ private:
 	bool load(std::string fileName);
 
 	// misc
+	void handle_dropped_files();
 	void save_to_png();
 	void save();
 

@@ -1,8 +1,10 @@
 #include <cstdio>
+#include <iostream>
 #include <cstring>
 
 #include "canvas.h"
 #include "raylib.h"
+#include "raygui.h"
 
 Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
     : width(width), height(height),
@@ -16,6 +18,11 @@ Canvas::Canvas(int width, int height, size_t maxLayers, std::string fileName)
 }
 
 void Canvas::Update() {
+	handle_dropped_files();
+
+	if(droppedFile.length()) 
+		return;
+
 	if (!isPenInProximity)
 		pointerPos = GetMousePosition();
 
@@ -36,4 +43,26 @@ void Canvas::Render() {
 	render_layer_ui();
 
 	bus.emptyEvents();
+	
+	if(this->droppedFile.length()) {
+		ShowCursor();
+		Rectangle rec = {GetScreenWidth()/2.0f - 150, 100, 300, 150};
+		int result = GuiMessageBox(rec, 
+				TextFormat("Unsaved Changes to %s", fileName.c_str()), 
+				TextFormat("You have unsaved changes to %s\nDo you want to overwrite this?", fileName.c_str()), 
+				"Yes;No"
+			);
+
+		std::cout << result << '\n';
+		if(result >= 0) {
+			if(result == 1) {
+				this->fileName = this->droppedFile;
+				handle_file_loading();
+			}
+			this->droppedFile = "";
+
+			HideCursor();
+		} 
+	}
+
 }
