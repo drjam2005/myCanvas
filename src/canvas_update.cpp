@@ -16,9 +16,15 @@ bool Canvas::handle_pen_events()
 
     isPenInProximity = IsTabletPenInRange();
 
+    if (isPenInProximity) {
+        GetLatestTabletPosition(&pointerPos.x, &pointerPos.y);
+    }
+
     pressure = 1.0f;
     if (IsTabletPenDown())
         GetLatestTabletPressure(&pressure);
+
+    tabletSamples = ConsumeTabletPenSamples();
 
     pointerPressed  = penPressedThisFrame  || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     pointerDown     = IsTabletPenDown()    || IsMouseButtonDown(MOUSE_BUTTON_LEFT);
@@ -350,19 +356,43 @@ bool Canvas::handle_tool_input(){
 			}
 			handled = true;
 		}
-		if(pointerDown) {
-			if(isColorPicking)
+		if (pointerDown) {
+			if (isColorPicking)
 				return true;
 
-			Vector2 currentCanvasMouse = screen_to_canvas(GetMousePos());
-			Vector2 prevCanvasMouse = screen_to_canvas(prevMousePos);
+			if (!tabletSamples.empty()) {
+				Vector2 walkPos = prevMousePos;
 
-			if(mouseState == HELD && prevMousePos.x >= 0) {
-				draw_line(prevCanvasMouse, currentCanvasMouse);
+				for (const PenSample& sample : tabletSamples) {
+					Vector2 samplePos = { sample.x, sample.y };
+					Vector2 currentCanvasMouse = screen_to_canvas(samplePos);
+					Vector2 prevCanvasMouse = screen_to_canvas(walkPos);
+
+					if (mouseState == HELD && walkPos.x >= 0) {
+						pressure = sample.pressure;
+						draw_line(prevCanvasMouse, currentCanvasMouse);
+					}
+
+					mouseState = HELD;
+					walkPos = samplePos;
+				}
+
+				prevMousePos = walkPos;
+			} else {
+				Vector2 currentCanvasMouse = screen_to_canvas(GetMousePos());
+				Vector2 prevCanvasMouse = screen_to_canvas(prevMousePos);
+
+				if (mouseState == HELD && prevMousePos.x >= 0) {
+					draw_line(prevCanvasMouse, currentCanvasMouse);
+				}
+
+				mouseState = HELD;
+				prevMousePos = GetMousePos();
 			}
-			mouseState = HELD;
+
 			handled = true;
-		} 
+		}
+
 		if(pointerReleased) {
 			if(isColorPicking){
 				if(!contains(colorQueue, clr)){

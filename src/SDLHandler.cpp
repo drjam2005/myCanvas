@@ -1,10 +1,13 @@
 #include "SDLHandler.h"
 #include <cstdio>
+#include <vector>
 
 namespace {
     float latestPressure = 1.0f;
     float latestTiltX = 0.0f;
     float latestTiltY = 0.0f;
+    float latestPenX = 0.0f;
+    float latestPenY = 0.0f;
     bool penActive = false;   // true while the pen tip is touching the surface
     bool penInRange = false;  // true while the pen is hovering/in proximity, even if not touching
     bool initialized = false;
@@ -14,6 +17,24 @@ namespace {
     // and should be consumed once per frame by the caller.
     bool penJustPressedFlag = false;
     bool penJustReleasedFlag = false;
+
+    // Every real hardware sample the pen produces gets appended here, instead
+    // of just overwriting "latest" values. Rendering only the latest value per
+    // frame loses every intermediate point when the tablet reports faster than
+    // you render (or than you happen to render THIS particular frame) -- that's
+    // what produces the faceted/chunky stroke edges. Consumers should drain
+    // this every frame and draw one segment per sample, not one per frame.
+    std::vector<PenSample> pendingSamples;
+
+    void PushSample(bool down)
+    {
+        PenSample sample;
+        sample.x = latestPenX;
+        sample.y = latestPenY;
+        sample.pressure = latestPressure;
+        sample.down = down;
+        pendingSamples.push_back(sample);
+    }
 }
 
 bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
@@ -36,13 +57,31 @@ bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
         {
             penActive = true;
             penJustPressedFlag = true;
+            latestPenX = event->ptouch.x;
+            latestPenY = event->ptouch.y;
+            PushSample(true);
             break;
         }
         case SDL_EVENT_PEN_UP:
         {
             penActive = false;
             penJustReleasedFlag = true;
+            latestPenX = event->ptouch.x;
+            latestPenY = event->ptouch.y;
+            // Push a final sample at release so the last drawn segment ends
+            // exactly where the pen actually lifted, then zero pressure so a
+            // subsequent GetLatestTabletPressure() call (if made before the
+            // next press) doesn't report a stale nonzero value.
+            PushSample(true);
             latestPressure = 0.0f;
+            break;
+        }
+        case SDL_EVENT_PEN_MOTION:
+        {
+            latestPenX = event->pmotion.x;
+            latestPenY = event->pmotion.y;
+            if (penActive)
+                PushSample(true);
             break;
         }
         case SDL_EVENT_PEN_AXIS:
@@ -52,6 +91,12 @@ bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
             {
                 case SDL_PEN_AXIS_PRESSURE:
                     latestPressure = axisEvent.value;
+                    // Pressure can change independently of position (SDL fires
+                    // separate axis events), so record a sample here too --
+                    // otherwise a pressure ramp mid-stroke with no position
+                    // change in between gets skipped entirely.
+                    if (penActive)
+                        PushSample(true);
                     break;
                 case SDL_PEN_AXIS_XTILT:
                     latestTiltX = axisEvent.value;
@@ -78,12 +123,12 @@ bool InitSDLTabletInput()
 
     printf("SDL version: %s\n", SDL_GetRevision());
 
-    // Pen -> mouse motion synthesis needs to stay ON, otherwise raylib's own
-    // GetMousePos() never updates while drawing with the tablet (it only moves
-    // in response to real SDL mouse-motion events). Press/release/pressure are
-    // already read directly from real pen events elsewhere in this file, so
-    // this only affects position tracking, not double-firing clicks.
-    SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "1");
+    // We no longer rely on SDL's pen->mouse synthesis for anything -- position,
+    // press/release, and pressure are all read directly from real pen events
+    // now. Synthetic mouse-from-pen events are unreliable on Windows (WinTab
+    // pen motion doesn't consistently generate SDL_EVENT_MOUSE_MOTION even
+    // with this hint on), so turning it off avoids relying on that entirely.
+    SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "0");
     SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "0");
 
     if (!SDL_AddEventWatch(WatchSDLEvent, nullptr)) {
@@ -104,10 +149,6 @@ void PumpSDLTabletInput()
     // calls SDL_PollEvent. raylib's own PLATFORM_DESKTOP_SDL backend already
     // polls events every frame, which is enough to keep WatchSDLEvent firing.
     //
-    // Previously this function ran its own SDL_PollEvent loop, which drained
-    // the queue before raylib's internal poll got a turn -- that's what was
-    // freezing mouse position, since raylib never saw the motion events.
-    //
     // Kept as a no-op (rather than deleted) so existing call sites like
     // Canvas::handle_pen_events() don't need to change.
 }
@@ -124,6 +165,7 @@ void ShutdownSDLTabletInput()
     latestPressure = 1.0f;
     latestTiltX = 0.0f;
     latestTiltY = 0.0f;
+    pendingSamples.clear();
 }
 
 bool GetLatestTabletPressure(float* pressure)
@@ -143,6 +185,20 @@ bool IsTabletPenInRange()
 bool IsTabletPenDown()
 {
     return penActive;
+}
+
+// Real pen coordinates, relative to the window client area -- same coordinate
+// space as raylib's GetMousePosition(). Only meaningful while the pen is in
+// range (hovering or touching); returns false otherwise so callers know to
+// fall back to the physical mouse.
+bool GetLatestTabletPosition(float* x, float* y)
+{
+    if (x == nullptr || y == nullptr || !penInRange)
+        return false;
+
+    *x = latestPenX;
+    *y = latestPenY;
+    return true;
 }
 
 // Call once per frame, after PumpSDLTabletInput(). Returns true if the pen
@@ -170,4 +226,15 @@ bool GetLatestTabletTilt(float* tiltX, float* tiltY)
     *tiltX = latestTiltX;
     *tiltY = latestTiltY;
     return true;
+}
+
+// Returns every pen sample (position + pressure) recorded since the last call,
+// in chronological order, then clears the buffer. Draw one line segment per
+// consecutive pair of samples -- not just from the frame-start position to the
+// frame-end position -- to avoid faceted/chunky strokes on fast movement.
+std::vector<PenSample> ConsumeTabletPenSamples()
+{
+    std::vector<PenSample> samples;
+    samples.swap(pendingSamples);
+    return samples;
 }

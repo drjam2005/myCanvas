@@ -3,11 +3,22 @@
 #define SDLHANDLER_H
 
 #include <SDL3/SDL.h>
+#include <vector>
+
+struct PenSample {
+    float x;
+    float y;
+    float pressure;
+    bool down;
+};
+
+std::vector<PenSample> ConsumeTabletPenSamples();
 
 bool InitSDLTabletInput();
 void PumpSDLTabletInput();
 void ShutdownSDLTabletInput();
 
+bool GetLatestTabletPosition(float* x, float* y);
 bool GetLatestTabletPressure(float* pressure);
 bool GetLatestTabletTilt(float* tiltX, float* tiltY);
 

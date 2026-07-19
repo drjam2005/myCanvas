@@ -86,6 +86,7 @@ private:
 	std::deque<std::pair<size_t, Image>> redo;
 	std::deque<Color> colorQueue;
 	std::deque<NotifMessage> messageQueue;
+	std::vector<PenSample> tabletSamples;
 
 	EventBus bus;
 
