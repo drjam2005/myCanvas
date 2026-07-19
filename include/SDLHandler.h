@@ -4,13 +4,19 @@
 
 #include <SDL3/SDL.h>
 
-#include <deque>
-
-bool InitSDLTabletInput(void* nativeWindowHandle);
+bool InitSDLTabletInput();
 void PumpSDLTabletInput();
 void ShutdownSDLTabletInput();
+
 bool GetLatestTabletPressure(float* pressure);
+bool GetLatestTabletTilt(float* tiltX, float* tiltY);
+
+bool IsTabletPenInRange();
+bool IsTabletPenDown();
+
+bool ConsumeTabletPenPressed();
+bool ConsumeTabletPenReleased();
+
 bool SDLCALL WatchSDLEvent(void* userdata, SDL_Event* event);
-std::deque<SDL_Event> DrainPenEvents();
 
 #endif

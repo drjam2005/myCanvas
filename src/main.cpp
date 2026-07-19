@@ -21,8 +21,9 @@ int main(int argc, char** argv){
 	SetTraceLogLevel(LOG_NONE);
 	SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE );
 	InitWindow(width, height, "myCanvas");
-	// SetTargetFPS(30);
-	InitSDLTabletInput(GetWindowHandle());
+
+	InitSDLTabletInput();
+	//SetTargetFPS(30);
 
 	HideCursor();
 	Canvas canvas(width, height, 16, fileName);
