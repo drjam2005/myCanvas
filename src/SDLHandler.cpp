@@ -1,264 +1,67 @@
 #include "SDLHandler.h"
-
-#include <mutex>
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <cstring>
-#include <cctype>
-#include <string>
-
-#if defined(__linux__)
-#include <X11/Xlib.h>
-#include <X11/extensions/XInput2.h>
-#endif
+#include <cstdio>
 
 namespace {
-	std::mutex penEventsMutex;
-	std::deque<SDL_Event> penEvents;
-	bool sdlInitializedHere = false;
-	float latestTabletPressure = 1.0f;
-	bool hasLatestTabletPressure = false;
-
-#if defined(__linux__)
-	struct PressureAxis {
-		int deviceId;
-		int axisNumber;
-		double min;
-		double max;
-	};
-
-	Display* xinputDisplay = nullptr;
-	int xinputOpcode = -1;
-	std::vector<PressureAxis> pressureAxes;
-
-	bool contains_case_insensitive(const char* text, const char* needle)
-	{
-		if (text == nullptr || needle == nullptr) return false;
-
-		std::string haystack(text);
-		std::string target(needle);
-		std::transform(haystack.begin(), haystack.end(), haystack.begin(), [](unsigned char c) {
-			return (char)std::tolower(c);
-		});
-		std::transform(target.begin(), target.end(), target.begin(), [](unsigned char c) {
-			return (char)std::tolower(c);
-		});
-
-		return haystack.find(target) != std::string::npos;
-	}
-
-	const PressureAxis* find_pressure_axis(int deviceId)
-	{
-		for (const PressureAxis& axis : pressureAxes) {
-			if (axis.deviceId == deviceId) return &axis;
-		}
-		return nullptr;
-	}
-
-	bool valuator_is_set(const unsigned char* mask, int axisNumber)
-	{
-		return (mask[axisNumber / 8] & (1 << (axisNumber % 8))) != 0;
-	}
-
-	int valuator_value_index(const unsigned char* mask, int axisNumber)
-	{
-		int index = 0;
-		for (int i = 0; i < axisNumber; ++i) {
-			if (valuator_is_set(mask, i)) ++index;
-		}
-		return index;
-	}
-
-	void InitXInputPressure()
-	{
-		xinputDisplay = XOpenDisplay(nullptr);
-		if (xinputDisplay == nullptr) return;
-
-		int event = 0;
-		int error = 0;
-		if (!XQueryExtension(xinputDisplay, "XInputExtension", &xinputOpcode, &event, &error)) {
-			XCloseDisplay(xinputDisplay);
-			xinputDisplay = nullptr;
-			return;
-		}
-
-		int major = 2;
-		int minor = 0;
-		if (XIQueryVersion(xinputDisplay, &major, &minor) != Success) {
-			XCloseDisplay(xinputDisplay);
-			xinputDisplay = nullptr;
-			return;
-		}
-
-		int deviceCount = 0;
-		XIDeviceInfo* devices = XIQueryDevice(xinputDisplay, XIAllDevices, &deviceCount);
-		for (int i = 0; i < deviceCount; ++i) {
-			XIDeviceInfo& device = devices[i];
-			for (int c = 0; c < device.num_classes; ++c) {
-				XIAnyClassInfo* klass = device.classes[c];
-				if (klass->type != XIValuatorClass) continue;
-
-				XIValuatorClassInfo* valuator = (XIValuatorClassInfo*)klass;
-				char* label = XGetAtomName(xinputDisplay, valuator->label);
-				bool isPressure = contains_case_insensitive(label, "pressure");
-				if (label != nullptr) XFree(label);
-
-				if (isPressure && valuator->max > valuator->min) {
-					pressureAxes.push_back({
-						device.deviceid,
-						valuator->number,
-						valuator->min,
-						valuator->max
-					});
-				}
-			}
-		}
-		if (devices != nullptr) XIFreeDeviceInfo(devices);
-
-		if (pressureAxes.empty()) {
-			XCloseDisplay(xinputDisplay);
-			xinputDisplay = nullptr;
-			return;
-		}
-
-		unsigned char mask[(XI_LASTEVENT + 7) / 8] = {};
-		XISetMask(mask, XI_RawMotion);
-		XISetMask(mask, XI_RawButtonPress);
-		XISetMask(mask, XI_RawButtonRelease);
-
-		XIEventMask eventMask = {};
-		eventMask.deviceid = XIAllDevices;
-		eventMask.mask_len = sizeof(mask);
-		eventMask.mask = mask;
-
-		XISelectEvents(xinputDisplay, DefaultRootWindow(xinputDisplay), &eventMask, 1);
-		XFlush(xinputDisplay);
-	}
-
-	void PumpXInputPressure()
-	{
-		if (xinputDisplay == nullptr) return;
-
-		while (XPending(xinputDisplay) > 0) {
-			XEvent event;
-			XNextEvent(xinputDisplay, &event);
-
-			if (event.xcookie.type != GenericEvent || event.xcookie.extension != xinputOpcode) continue;
-			if (!XGetEventData(xinputDisplay, &event.xcookie)) continue;
-
-			if (event.xcookie.evtype == XI_RawMotion || event.xcookie.evtype == XI_RawButtonPress) {
-				XIRawEvent* raw = (XIRawEvent*)event.xcookie.data;
-				const PressureAxis* axis = find_pressure_axis(raw->deviceid);
-
-				if (axis != nullptr && raw->valuators.mask != nullptr &&
-					axis->axisNumber < raw->valuators.mask_len * 8 &&
-					valuator_is_set(raw->valuators.mask, axis->axisNumber)) {
-					int valueIndex = valuator_value_index(raw->valuators.mask, axis->axisNumber);
-					double* values = raw->raw_values != nullptr ? raw->raw_values : raw->valuators.values;
-					if (values != nullptr) {
-						double normalized = (values[valueIndex] - axis->min) / (axis->max - axis->min);
-						latestTabletPressure = (float)std::clamp(normalized, 0.0, 1.0);
-						hasLatestTabletPressure = true;
-					}
-				}
-			} else if (event.xcookie.evtype == XI_RawButtonRelease) {
-				latestTabletPressure = 1.0f;
-				hasLatestTabletPressure = false;
-			}
-
-			XFreeEventData(xinputDisplay, &event.xcookie);
-		}
-	}
-
-	void ShutdownXInputPressure()
-	{
-		pressureAxes.clear();
-		if (xinputDisplay != nullptr) {
-			XCloseDisplay(xinputDisplay);
-			xinputDisplay = nullptr;
-		}
-	}
-#endif
-}
-
-bool InitSDLTabletInput(void* nativeWindowHandle)
-{
-    (void)nativeWindowHandle;
-    SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "1");
-    SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "0");
-    SDL_SetHint(SDL_HINT_VIDEO_X11_EXTERNAL_WINDOW_INPUT, "1");
-
+    float latestPressure = 1.0f;
+    float latestTiltX = 0.0f;
+    float latestTiltY = 0.0f;
+    bool penActive = false;   // true while the pen tip is touching the surface
+    bool penInRange = false;  // true while the pen is hovering/in proximity, even if not touching
     bool initialized = false;
 
-    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0) {
-        if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
-            std::cout << "SDL_Init failed: " << SDL_GetError() << '\n';
-        } else {
-            sdlInitializedHere = true;
-            initialized = true;
-        }
-    } else {
-        initialized = true;
-    }
-
-    if (initialized && !SDL_AddEventWatch(WatchSDLEvent, nullptr)) {
-        std::cout << "SDL_AddEventWatch failed: " << SDL_GetError() << '\n';
-        initialized = false;
-    }
-
-#if defined(__linux__)
-    InitXInputPressure();
-    initialized = initialized || xinputDisplay != nullptr;
-#endif
-
-    return initialized;
-}
-
-void PumpSDLTabletInput()
-{
-    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) != 0) {
-        SDL_PumpEvents();
-    }
-
-#if defined(__linux__)
-    PumpXInputPressure();
-#endif
-}
-
-void ShutdownSDLTabletInput()
-{
-#if defined(__linux__)
-    ShutdownXInputPressure();
-#endif
-
-    SDL_RemoveEventWatch(WatchSDLEvent, nullptr);
-
-    if (sdlInitializedHere) {
-        SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-        sdlInitializedHere = false;
-    }
-}
-
-bool GetLatestTabletPressure(float* pressure)
-{
-    if (!hasLatestTabletPressure || pressure == nullptr) return false;
-    *pressure = latestTabletPressure;
-    return true;
+    // Sticky "this happened since last consumed" flags. SDL_AddEventWatch fires
+    // synchronously inside SDL_PollEvent, so these are set during PumpSDLTabletInput()
+    // and should be consumed once per frame by the caller.
+    bool penJustPressedFlag = false;
+    bool penJustReleasedFlag = false;
 }
 
 bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
 {
-    switch (event->type) {
+    switch (event->type)
+    {
         case SDL_EVENT_PEN_PROXIMITY_IN:
+        {
+            penInRange = true;
+            break;
+        }
         case SDL_EVENT_PEN_PROXIMITY_OUT:
+        {
+            penInRange = false;
+            penActive = false;
+            latestPressure = 0.0f;
+            break;
+        }
         case SDL_EVENT_PEN_DOWN:
+        {
+            penActive = true;
+            penJustPressedFlag = true;
+            break;
+        }
         case SDL_EVENT_PEN_UP:
-        case SDL_EVENT_PEN_MOTION:
+        {
+            penActive = false;
+            penJustReleasedFlag = true;
+            latestPressure = 0.0f;
+            break;
+        }
         case SDL_EVENT_PEN_AXIS:
         {
-            std::lock_guard<std::mutex> lock(penEventsMutex);
-            penEvents.push_back(*event);
+            const SDL_PenAxisEvent& axisEvent = event->paxis;
+            switch (axisEvent.axis)
+            {
+                case SDL_PEN_AXIS_PRESSURE:
+                    latestPressure = axisEvent.value;
+                    break;
+                case SDL_PEN_AXIS_XTILT:
+                    latestTiltX = axisEvent.value;
+                    break;
+                case SDL_PEN_AXIS_YTILT:
+                    latestTiltY = axisEvent.value;
+                    break;
+                default:
+                    break;
+            }
             break;
         }
         default:
@@ -268,10 +71,103 @@ bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
     return true;
 }
 
-std::deque<SDL_Event> DrainPenEvents()
+bool InitSDLTabletInput()
 {
-    std::deque<SDL_Event> events;
-    std::lock_guard<std::mutex> lock(penEventsMutex);
-    events.swap(penEvents);
-    return events;
+    if (initialized)
+        return true;
+
+    printf("SDL version: %s\n", SDL_GetRevision());
+
+    // Pen -> mouse motion synthesis needs to stay ON, otherwise raylib's own
+    // GetMousePos() never updates while drawing with the tablet (it only moves
+    // in response to real SDL mouse-motion events). Press/release/pressure are
+    // already read directly from real pen events elsewhere in this file, so
+    // this only affects position tracking, not double-firing clicks.
+    SDL_SetHint(SDL_HINT_PEN_MOUSE_EVENTS, "1");
+    SDL_SetHint(SDL_HINT_PEN_TOUCH_EVENTS, "0");
+
+    if (!SDL_AddEventWatch(WatchSDLEvent, nullptr)) {
+        printf("Failed to add event watch: %s\n", SDL_GetError());
+    } else {
+        printf("SDL event watcher installed\n");
+    }
+
+    initialized = true;
+    return true;
+}
+
+void PumpSDLTabletInput()
+{
+    // Intentionally does nothing now. SDL_AddEventWatch's callback fires
+    // automatically whenever SDL processes an event (during SDL_PumpEvents,
+    // which SDL_PollEvent calls internally) -- regardless of who actually
+    // calls SDL_PollEvent. raylib's own PLATFORM_DESKTOP_SDL backend already
+    // polls events every frame, which is enough to keep WatchSDLEvent firing.
+    //
+    // Previously this function ran its own SDL_PollEvent loop, which drained
+    // the queue before raylib's internal poll got a turn -- that's what was
+    // freezing mouse position, since raylib never saw the motion events.
+    //
+    // Kept as a no-op (rather than deleted) so existing call sites like
+    // Canvas::handle_pen_events() don't need to change.
+}
+
+void ShutdownSDLTabletInput()
+{
+    if (!initialized)
+        return;
+
+    SDL_RemoveEventWatch(WatchSDLEvent, nullptr);
+    initialized = false;
+    penActive = false;
+    penInRange = false;
+    latestPressure = 1.0f;
+    latestTiltX = 0.0f;
+    latestTiltY = 0.0f;
+}
+
+bool GetLatestTabletPressure(float* pressure)
+{
+    if (pressure == nullptr || !penActive)
+        return false;
+
+    *pressure = latestPressure;
+    return true;
+}
+
+bool IsTabletPenInRange()
+{
+    return penInRange;
+}
+
+bool IsTabletPenDown()
+{
+    return penActive;
+}
+
+// Call once per frame, after PumpSDLTabletInput(). Returns true if the pen
+// touched down at any point since the last call, then clears the flag.
+bool ConsumeTabletPenPressed()
+{
+    bool value = penJustPressedFlag;
+    penJustPressedFlag = false;
+    return value;
+}
+
+// Same as above but for pen-up.
+bool ConsumeTabletPenReleased()
+{
+    bool value = penJustReleasedFlag;
+    penJustReleasedFlag = false;
+    return value;
+}
+
+bool GetLatestTabletTilt(float* tiltX, float* tiltY)
+{
+    if (tiltX == nullptr || tiltY == nullptr || !penInRange)
+        return false;
+
+    *tiltX = latestTiltX;
+    *tiltY = latestTiltY;
+    return true;
 }

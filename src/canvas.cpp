@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstring>
 
+#include "SDLHandler.h"
+
 #include "canvas.h"
 #include "raylib.h"
 #include "raygui.h"
@@ -53,7 +55,6 @@ void Canvas::Render() {
 				"Yes;No"
 			);
 
-		std::cout << result << '\n';
 		if(result >= 0) {
 			if(result == 1) {
 				this->fileName = this->droppedFile;

@@ -5,80 +5,27 @@
 #include "raylib.h"
 #include "raymath.h"
 
-#include "SDL3/SDL_pen.h"
 #include "SDLHandler.h"
 
-bool Canvas::handle_pen_events(){
-	penPressedThisFrame = false;
-	penReleasedThisFrame = false;
-	bool handled = false;
-	for (const SDL_Event& e : DrainPenEvents()) {
-		switch(e.type){
-			case SDL_EVENT_PEN_PROXIMITY_IN: 
-				pointerPos = { e.ptouch.x, e.ptouch.y };
-				isPenInProximity = true;
-				handled = true;
-				break;
+bool Canvas::handle_pen_events()
+{
+    PumpSDLTabletInput();
 
-			case SDL_EVENT_PEN_PROXIMITY_OUT:
-				isPenInProximity = false;
-				isPenDown = false;
-				pressure = 1.0f;
-				handled = true;
-				break;
+    penPressedThisFrame  = ConsumeTabletPenPressed();
+    penReleasedThisFrame = ConsumeTabletPenReleased();
 
-			case SDL_EVENT_PEN_DOWN:
-				pointerPos = { e.ptouch.x, e.ptouch.y };
-				isPenDown = true;
-				penPressedThisFrame = true;
-				handled = true;
-				break;
+    isPenInProximity = IsTabletPenInRange();
 
-			case SDL_EVENT_PEN_UP:
-				pointerPos = { e.ptouch.x, e.ptouch.y };
-				isPenDown = false;
-				penReleasedThisFrame = true;
-				pressure = 1.0f;
-				handled = true;
-				break;
+    pressure = 1.0f;
+    if (IsTabletPenDown())
+        GetLatestTabletPressure(&pressure);
 
-			case SDL_EVENT_PEN_MOTION:
-				pointerPos = { e.pmotion.x, e.pmotion.y };
-				isPenDown = (e.pmotion.pen_state & SDL_PEN_INPUT_DOWN) != 0;
-				handled = true;
-				break;
+    pointerPressed  = penPressedThisFrame  || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    pointerDown     = IsTabletPenDown()    || IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+    pointerReleased = penReleasedThisFrame || IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
-			case SDL_EVENT_PEN_AXIS:
-				pointerPos = { e.paxis.x, e.paxis.y };
-				isPenDown = (e.paxis.pen_state & SDL_PEN_INPUT_DOWN) != 0;
-				if(e.paxis.axis == SDL_PEN_AXIS_PRESSURE){
-					pressure = e.paxis.value;
-				}
-				handled = true;
-				break;
-
-			default:
-				break;
-		}
-	}
-	float tabletPressure = 1.0f;
-	if (GetLatestTabletPressure(&tabletPressure)) {
-		pressure = tabletPressure;
-		handled = true;
-	}
-
-	if (isPenInProximity) {
-		pointerPressed  = penPressedThisFrame;
-		pointerDown     = isPenDown;
-		pointerReleased = penReleasedThisFrame;
-	} else {
-		pointerPressed  = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-		pointerDown     = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-		pointerReleased = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
-		pressure = 1.0f;
-	}
-
-	return handled;
+    bool handled = pointerPressed || pointerDown || pointerReleased || isPenInProximity;
+    return handled;
 }
 
 bool Canvas::handle_key_events(){
@@ -106,11 +53,7 @@ bool Canvas::handle_key_events(){
 	}
 
 	if (ctrl && space) {
-		if (pointerPressed) {
-			prevMousePos = GetMousePos();
-		}
 		if (pointerDown) {
-			SetWindowTitle(TextFormat("myCanvas | %s", fileName.c_str()));
 			static float zoomAccumulator = 0.0f;
 			if (ctrl && space && pointerDown) {
 				float yDelta = GetMousePos().y - prevMousePos.y;
@@ -143,7 +86,6 @@ bool Canvas::handle_key_events(){
 				prevMousePos = GetMousePos();
 			}
 		}
-		return true;
 	}
 
 
@@ -420,7 +362,8 @@ bool Canvas::handle_tool_input(){
 			}
 			mouseState = HELD;
 			handled = true;
-		} else if(pointerReleased) {
+		} 
+		if(pointerReleased) {
 			if(isColorPicking){
 				if(!contains(colorQueue, clr)){
 					colorQueue.push_front(clr);
