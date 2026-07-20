@@ -7,7 +7,7 @@ Fun little drawing side-project
 
 > [!WARNING]
 > Dependencies (for building):
->- CMake (optional, use Nob)
+>- CMake (optional, you can use nob)
 >- C++ Compiler (ideally gcc)
 >- MinGW compiler (Windows)
 
@@ -49,6 +49,8 @@ $ ./nob.exe -j
 ## Running
 - Unix:
 ```
+$ cd build/
+
 // running temporarily
 $ ./myCanvas
 
@@ -63,6 +65,8 @@ $ ./myCanvas -w 1920 -h 1080 -f fileName
 ```
 - Windows:
 ```
+$ cd build/
+
 // running temporarily
 $ myCanvas.exe
 
