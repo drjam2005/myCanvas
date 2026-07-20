@@ -1,4 +1,5 @@
 #include "SDLHandler.h"
+#include <iostream>
 #include <cstdio>
 
 namespace {
@@ -22,11 +23,13 @@ bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
     {
         case SDL_EVENT_PEN_PROXIMITY_IN:
         {
+			std::cout << "penInRange" << '\n';
             penInRange = true;
             break;
         }
         case SDL_EVENT_PEN_PROXIMITY_OUT:
         {
+			std::cout << "penOutRange" << '\n';
             penInRange = false;
             penActive = false;
             latestPressure = 0.0f;
@@ -96,21 +99,7 @@ bool InitSDLTabletInput()
     return true;
 }
 
-void PumpSDLTabletInput()
-{
-    // Intentionally does nothing now. SDL_AddEventWatch's callback fires
-    // automatically whenever SDL processes an event (during SDL_PumpEvents,
-    // which SDL_PollEvent calls internally) -- regardless of who actually
-    // calls SDL_PollEvent. raylib's own PLATFORM_DESKTOP_SDL backend already
-    // polls events every frame, which is enough to keep WatchSDLEvent firing.
-    //
-    // Previously this function ran its own SDL_PollEvent loop, which drained
-    // the queue before raylib's internal poll got a turn -- that's what was
-    // freezing mouse position, since raylib never saw the motion events.
-    //
-    // Kept as a no-op (rather than deleted) so existing call sites like
-    // Canvas::handle_pen_events() don't need to change.
-}
+void PumpSDLTabletInput() { }
 
 void ShutdownSDLTabletInput()
 {
@@ -135,18 +124,12 @@ bool GetLatestTabletPressure(float* pressure)
     return true;
 }
 
-bool IsTabletPenInRange()
-{
-    return penInRange;
-}
 
 bool IsTabletPenDown()
 {
     return penActive;
 }
 
-// Call once per frame, after PumpSDLTabletInput(). Returns true if the pen
-// touched down at any point since the last call, then clears the flag.
 bool ConsumeTabletPenPressed()
 {
     bool value = penJustPressedFlag;
@@ -162,12 +145,3 @@ bool ConsumeTabletPenReleased()
     return value;
 }
 
-bool GetLatestTabletTilt(float* tiltX, float* tiltY)
-{
-    if (tiltX == nullptr || tiltY == nullptr || !penInRange)
-        return false;
-
-    *tiltX = latestTiltX;
-    *tiltY = latestTiltY;
-    return true;
-}

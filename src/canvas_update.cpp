@@ -14,11 +14,8 @@ bool Canvas::handle_pen_events()
     penPressedThisFrame  = ConsumeTabletPenPressed();
     penReleasedThisFrame = ConsumeTabletPenReleased();
 
-    isPenInProximity = IsTabletPenInRange();
-
     pressure = 1.0f;
-    if (IsTabletPenDown())
-        GetLatestTabletPressure(&pressure);
+    if (IsTabletPenDown()) GetLatestTabletPressure(&pressure);
 
     pointerPressed  = penPressedThisFrame  || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     pointerDown     = IsTabletPenDown()    || IsMouseButtonDown(MOUSE_BUTTON_LEFT);

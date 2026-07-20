@@ -9,9 +9,7 @@ void PumpSDLTabletInput();
 void ShutdownSDLTabletInput();
 
 bool GetLatestTabletPressure(float* pressure);
-bool GetLatestTabletTilt(float* tiltX, float* tiltY);
 
-bool IsTabletPenInRange();
 bool IsTabletPenDown();
 
 bool ConsumeTabletPenPressed();
