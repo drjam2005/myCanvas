@@ -15,7 +15,13 @@ bool Canvas::handle_pen_events()
     penReleasedThisFrame = ConsumeTabletPenReleased();
 
     pressure = 1.0f;
-    if (IsTabletPenDown()) GetLatestTabletPressure(&pressure);
+    if (IsTabletPenDown()) 
+		GetLatestTabletPressure(&pressure);
+
+#if defined(WIN32)
+	if (IsTabletInProximity())
+		GetLatestTabletPosition(&pointerPos.x, &pointerPos.y);
+#endif
 
     pointerPressed  = penPressedThisFrame  || IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     pointerDown     = IsTabletPenDown()    || IsMouseButtonDown(MOUSE_BUTTON_LEFT);
@@ -87,7 +93,6 @@ bool Canvas::handle_key_events(){
 
 
 	if (ctrl && shift) {
-		// swapping
 		{
 			size_t otherLayer = selectedLayer;
 			bool isSwap = false;
