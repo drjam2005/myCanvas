@@ -25,7 +25,7 @@ void Canvas::Update() {
 	if(droppedFile.length()) 
 		return;
 
-	if (!isPenInProximity && !IsTabletPenDown())
+	if (!isPenInProximity)
 		pointerPos = GetMousePosition();
 
 	handle_pen_events();

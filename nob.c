@@ -361,7 +361,7 @@ int main(int argc, char** argv){
 #elif defined(__linux__)
 		"-Lvendor/raylib/unix/lib/", "-l:libraylib.a",
 		"-Lvendor/SDL/unix/lib/", "-lSDL3",
-		"-lX11", "-lXi"
+		"-lX11"
 #endif
 	};
 
