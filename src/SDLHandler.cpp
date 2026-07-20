@@ -13,56 +13,59 @@ namespace {
 
     bool penJustPressedFlag = false;
     bool penJustReleasedFlag = false;
+
 }
 
-bool SDLCALL WatchSDLEvent(void*, SDL_Event* event) {
+bool SDLCALL WatchSDLEvent(void*, SDL_Event* event)
+{
     switch (event->type)
     {
         case SDL_EVENT_PEN_PROXIMITY_IN:
-        {
-			penLastPositionX = event->pmotion.x;
-			penLastPositionY = event->pmotion.y;
+        case SDL_EVENT_PEN_DOWN:
+        case SDL_EVENT_PEN_UP:
+        case SDL_EVENT_PEN_AXIS:
+            penLastPositionX = event->paxis.x;
+            penLastPositionY = event->paxis.y;
+            break;
+
+        case SDL_EVENT_PEN_MOTION:
+            penLastPositionX = event->pmotion.x;
+            penLastPositionY = event->pmotion.y;
+            break;
+    }
+
+    switch (event->type)
+    {
+        case SDL_EVENT_PEN_PROXIMITY_IN:
             penInRange = true;
             break;
-        }
+
         case SDL_EVENT_PEN_PROXIMITY_OUT:
-        {
             penInRange = false;
             penActive = false;
             latestPressure = 0.0f;
             break;
-        }
+
         case SDL_EVENT_PEN_DOWN:
-        {
-			penLastPositionX = event->pmotion.x;
-			penLastPositionY = event->pmotion.y;
+            penInRange = true;
             penActive = true;
             penJustPressedFlag = true;
             break;
-        }
+
+        case SDL_EVENT_PEN_MOTION:
+            penInRange = true;
+            break;
+
         case SDL_EVENT_PEN_UP:
-        {
+            penInRange = true;
             penActive = false;
             penJustReleasedFlag = true;
             latestPressure = 0.0f;
             break;
-        }
+
         case SDL_EVENT_PEN_AXIS:
-        {
-			penLastPositionX = event->paxis.x;
-			penLastPositionY = event->paxis.y;
-            const SDL_PenAxisEvent& axisEvent = event->paxis;
-            switch (axisEvent.axis)
-            {
-                case SDL_PEN_AXIS_PRESSURE:
-                    latestPressure = axisEvent.value;
-                    break;
-                default:
-                    break;
-            }
-            break;
-        }
-        default:
+            if (event->paxis.axis == SDL_PEN_AXIS_PRESSURE)
+                latestPressure = event->paxis.value;
             break;
     }
 

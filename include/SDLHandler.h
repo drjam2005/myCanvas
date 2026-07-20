@@ -3,6 +3,7 @@
 #define SDLHANDLER_H
 
 #include <SDL3/SDL.h>
+#include <deque>
 
 bool InitSDLTabletInput();
 void PumpSDLTabletInput();

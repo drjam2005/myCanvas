@@ -19,7 +19,8 @@ bool Canvas::handle_pen_events()
 		GetLatestTabletPressure(&pressure);
 
 #if defined(WIN32)
-	if (IsTabletInProximity())
+	isPenInProximity = IsTabletPenInProximity();
+	if(isPenInProximity)
 		GetLatestTabletPosition(&pointerPos.x, &pointerPos.y);
 #endif
 
