@@ -11,15 +11,9 @@ Fun little drawing side-project
 >- C++ Compiler (ideally gcc)
 >- MinGW compiler (Windows)
 
-Raylib and SDL3 are vendored under `vendor/`; SDL3 does not need to be installed system-wide.
+Raylib and SDL3 are vendored under `vendor/`, SDL3 does not need to be installed system-wide.
 By default, the app links prebuilt static archives from `vendor/raylib/<platform>/lib`
 and `vendor/SDL/<platform>/lib`, where `<platform>` is `windows` or `unix`.
-
-To regenerate those archives on the current platform:
-```bash
-cmake -S . -B build-vendor -DMYCANVAS_BUILD_VENDOR_LIBS=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build-vendor --target SDL3-static raylib
-```
 
 ## Building (Using CMake)
 -- Unix Systems:
