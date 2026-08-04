@@ -76,6 +76,5 @@ elseif(UNIX)
         pthread
         dl
 		X11
-		Xi
     )
 endif()
