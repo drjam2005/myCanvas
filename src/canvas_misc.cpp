@@ -58,21 +58,22 @@ void Canvas::save(){
 
 void Canvas::save_to_png(){
 	RenderTexture finalTex = LoadRenderTexture(width, height);
+
 	BeginTextureMode(finalTex);
-	ClearBackground(BLANK);
+		ClearBackground(BLANK);
 
-	for(auto& l : layers) {
-		BeginBlendMode(l.blendingMode);
+		for(auto& l : layers) {
+			BeginBlendMode(l.blendingMode);
 
-		Rectangle source = { 0, 0, (float)width, (float)height};
-		Rectangle dest = { 0, 0,   (float)width,  (float)height};
+			Rectangle source = { 0, 0, (float)width, (float)height};
+			Rectangle dest =   { 0, 0, (float)width, (float)height};
 
-		DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
+			DrawTexturePro(l.tex.texture, source, dest, (Vector2){0, 0}, 0.0f, Color{255,255,255,(unsigned char)l.opacity});
 
-		EndBlendMode();
-	}
-
+			EndBlendMode();
+		}
 	EndTextureMode();
+
 	Image finalImage = LoadImageFromTexture(finalTex.texture);
 	std::string finalFilePath = std::string(GetFileNameWithoutExt(fileName.c_str())) + ".png";
 	ExportImage(finalImage, finalFilePath.c_str());
@@ -211,7 +212,8 @@ void Canvas::handle_window(){
 }
 
 void Canvas::create_layer(bool whiteBackground) {
-    layers.emplace_back(width, height, whiteBackground);
+	layerCount++;
+    layers.emplace_back(width, height, TextFormat("Layer %d", layerCount), whiteBackground);
 }
 
 Layer& Canvas::get_current_layer() {

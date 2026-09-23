@@ -119,6 +119,7 @@ bool Canvas::handle_key_events(){
 				selectedLayer = otherLayer;
 			}
 		}
+
 		if (IsKeyPressed(KEY_Z)) {
 			if (!redo.empty()) {
 				size_t layerIdx = redo.front().first;
@@ -133,6 +134,11 @@ bool Canvas::handle_key_events(){
 				redo.pop_front();
 			}
 		}
+		
+		if (IsKeyPressed(KEY_D)) {
+			layers.erase(layers.begin() + selectedLayer);
+		}
+
 		return true;
 	}
 	if(shift && !ctrl && !space){

@@ -16,12 +16,13 @@ enum MOUSE_STATE {
 struct Layer {
     int width;
     int height;
+	std::string layerName = "";
     unsigned char opacity = 255;
     RenderTexture2D tex;
 	BlendMode blendingMode;
 
-    Layer(int w, int h, bool whiteBackground = false)
-        : width(w), height(h), opacity(255), blendingMode(BLEND_ALPHA)
+    Layer(int w, int h, const char* name, bool whiteBackground = false)
+        : width(w), height(h), opacity(255), blendingMode(BLEND_ALPHA), layerName(name)
     {
         tex = LoadRenderTexture(w, h);
 		BeginTextureMode(tex);
@@ -101,6 +102,7 @@ private:
 	Image currentLayerCache;
     int width;
     int height;
+	int layerCount = 0;
     float brushSize;
 	float pressure;
 	float eraserSize;

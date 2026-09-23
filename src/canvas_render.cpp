@@ -129,7 +129,7 @@ void Canvas::render_layer_ui(){
 				blend = 'N';
 				break;
 		}
-		DrawTextContrast(TextFormat("[%c] Layer: %d [%.2f%]", blend , i, 100.0f*(layers[i].opacity/255.0f)), 20, 60+(24*y), 20, i == selectedLayer ? GREEN : WHITE);
+		DrawTextContrast(TextFormat("[%c] %s: [%.2f%]", blend , layers[i].layerName.c_str(), 100.0f*(layers[i].opacity/255.0f)), 20, 60+(24*y), 20, i == selectedLayer ? GREEN : WHITE);
 	}
 	DrawTextContrast((isBrush ? "Current Mode: BRUSH" : "Current Mode: ERASER"), 20, GetScreenHeight()-60.0f, 20, isBrush ? WHITE : PINK);
 	DrawTextContrast(TextFormat("Transparency: %.0f", ((float)clr.a/255.0f)*100.0f), 20, GetScreenHeight()-40.0f, 20, WHITE);
