@@ -6,11 +6,11 @@
 Core* core = NULL;
 
 bool plug_init(void) {
-	core = calloc(1, sizeof(*core));
+	core = (Core*)calloc(1, sizeof(*core));
 	if(core == NULL)
 		return false;
 
-	core->canvas.dimensions = (Vector2){GetScreenWidth(), GetScreenHeight()};
+	core->canvas.dimensions = (Vector2){(float)GetScreenWidth(), (float)GetScreenHeight()};
 	create_layer(&core->canvas);
 	if(core->canvas.layer_count == 0 || !IsRenderTextureValid(core->canvas.layers[0].tex)) {
 		free(core->canvas.layers);
@@ -34,5 +34,5 @@ void* plug_pre_reload(void) {
 }
 
 void plug_post_reload(void* data) {
-	core = data;
+	core = (Core*)data;
 }
