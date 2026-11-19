@@ -1,10 +1,9 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "../structs/canvas.h"
-#include "../structs/layer.h"
+#include "../systems/core.h"
 #include "./editor_info.h"
 
-void render(editorState* state, Canvas* canvas);
+void render(Core* core);
 void render_layer(editorState* state, Layer layer);
 #endif

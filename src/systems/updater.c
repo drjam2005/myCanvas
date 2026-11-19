@@ -1,7 +1,9 @@
 #include "../../include/systems/updater.h"
 #include "../../vendor/raylib/windows/include/raymath.h"
 
-void update(editorState* state, Canvas* canvas) {
+void update(Core* core) {
+	Canvas* canvas = &core->canvas;
+	editorState* state = &core->state;
 
 	state->mousePos = GetMousePosition();
 	state->mouseDown = IsMouseButtonDown(MOUSE_LEFT_BUTTON);

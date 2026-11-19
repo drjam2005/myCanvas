@@ -1,6 +1,9 @@
 #include "../../include/systems/renderer.h"
 
-void render(editorState* state, Canvas* canvas) {
+void render(Core* core) {
+	Canvas* canvas = &core->canvas;
+	editorState* state = &core->state;
+
 	if(canvas == NULL)
 		return;
 
@@ -14,7 +17,7 @@ void render(editorState* state, Canvas* canvas) {
 		render_layer(state, canvas->layers[i]);
 	}
 
-	DrawText(TextFormat("S: (%zu), C: (%zu)", state->selectedLayer, canvas->layer_count), 20, 20, 30, BLACK);
+	DrawText(TextFormat("S: (%d), C: (%zu)", state->selectedLayer, canvas->layer_count), 20, 20, 30, BLACK);
 }
 
 void render_layer(editorState* state, Layer layer) {

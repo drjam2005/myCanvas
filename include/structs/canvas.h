@@ -11,6 +11,7 @@
 #endif
 
 #include "./layer.h"
+#include "../systems/editor_info.h"
 #include <stddef.h>
 
 typedef struct {
