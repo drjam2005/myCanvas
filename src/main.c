@@ -31,11 +31,10 @@ int main(void) {
 #endif
 		}
 
-		plug.plug_update();
-
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
+		plug.plug_update();
 		plug.plug_render();
 
 		DrawFPS(20, 20);
