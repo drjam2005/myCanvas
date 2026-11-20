@@ -11,12 +11,13 @@
 #endif
 
 typedef struct {
+	const char* layer_name;
     RenderTexture2D tex;
 	BlendMode blending_mode;
 	char opacity;
 	// other stuff
 } Layer;
 
-Layer createLayer(Vector2 dimensions);
+Layer createLayer(Vector2 dimensions, const char* layer_name);
 
 #endif

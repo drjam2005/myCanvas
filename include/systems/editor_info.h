@@ -9,11 +9,15 @@
 #include "../../vendor/raylib/unix/include/raymath.h"
 #endif
 
+#include "../systems/pen_state.h"
+
 typedef struct {
 	bool isPanning;
 	bool mousePressed;
 	bool mouseDown;
 	bool mouseReleased;
+
+	PEN_STATE pen_state;
 
 	Vector2 mousePos;
 	Vector2 prevPos;

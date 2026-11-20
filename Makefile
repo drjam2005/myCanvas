@@ -1,7 +1,8 @@
 LIBS = -L ./vendor/raylib/unix/lib/ -l:libraylib.a -lX11 -lm -L ./vendor/SDL/unix/lib/ -lSDL3
 CFLAGS = -O0 -g3 -MMD -MP
 
-PLUG = ./build/plug.o ./build/layer.o ./build/renderer.o ./build/updater.o ./build/canvas.o
+PLUG = ./build/plug.o ./build/layer.o ./build/renderer.o ./build/updater.o ./build/canvas.o \
+	./build/inputs.o ./build/shortcuts.o
 
 ifdef RELEASE
 all: ./build/main-release
@@ -44,6 +45,12 @@ endif
 	cc $(CFLAGS) -fPIC -c -o $@ $<
 
 ./build/updater.o: ./src/systems/updater.c Makefile | ./build/
+	cc $(CFLAGS) -fPIC -c -o $@ $<
+
+./build/inputs.o: ./src/systems/inputs/inputs.c Makefile | ./build/
+	cc $(CFLAGS) -fPIC -c -o $@ $<
+
+./build/shortcuts.o: ./src/systems/shortcuts.c Makefile | ./build/
 	cc $(CFLAGS) -fPIC -c -o $@ $<
 
 ./build/:
