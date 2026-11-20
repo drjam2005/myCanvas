@@ -10,7 +10,7 @@ typedef struct {
 	void (*plug_render)(void);
 
 	void* (*plug_pre_reload)(void);
-	void  (*plug_post_reload)(void*);
+	bool  (*plug_post_reload)(void*);
 
 	bool (*plug_init)(void);
 } Plug;
@@ -23,5 +23,5 @@ bool  plug_init(void);
 void  plug_update(void);
 void  plug_render(void);
 void* plug_pre_reload(void);
-void  plug_post_reload(void*);
+bool  plug_post_reload(void*);
 #endif

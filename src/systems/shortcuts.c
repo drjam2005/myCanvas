@@ -7,12 +7,18 @@ bool key_shortcut_register(ShortcutManager* manager, void (*func)(Core*), size_t
 	KeyShortcut newShortcut = {0};
 	newShortcut.func = func;
 	newShortcut.key_count = key_count;
-	memcpy(newShortcut.keys, keys, sizeof(KeyboardKey)*key_count);
+	if (!func || !keys || key_count == 0 ||
+	    key_count > sizeof(newShortcut.keys) / sizeof(newShortcut.keys[0]))
+		return false;
+	memcpy(newShortcut.keys, keys, sizeof(newShortcut.keys[0]) * key_count);
 
-	manager->key_shortcuts = realloc(manager->key_shortcuts, manager->keyshortcut_count * (sizeof(*manager->key_shortcuts) + 1));
-	manager->keyshortcut_count++;
-	manager->key_shortcuts[manager->keyshortcut_count-1] = newShortcut;
+	KeyShortcut* shortcuts = realloc(manager->key_shortcuts,
+	                                  (manager->keyshortcut_count + 1) * sizeof(*shortcuts));
+	if (!shortcuts)
+		return false;
 
+	manager->key_shortcuts = shortcuts;
+	manager->key_shortcuts[manager->keyshortcut_count++] = newShortcut;
 	return true;
 }
 
@@ -72,7 +78,8 @@ void pen_shortcut_update(ShortcutManager* manager, Core* core) {
     for (size_t i = 0; i < manager->penshortcut_count; ++i) {
         PenShortcut* shortcut = &manager->pen_shortcuts[i];
 
-        if (shortcut->pen_state != core->state.pen_state)
+        PEN_STATE state = core->state.pen_state;
+        if (shortcut->pen_state == PEN_NULL ? state != PEN_NULL : !(shortcut->pen_state & state))
             continue;
 
         bool active = true;
@@ -92,8 +99,14 @@ void pen_shortcut_update(ShortcutManager* manager, Core* core) {
 }
 
 void key_shortcut_free(ShortcutManager* manager) {
+	free(manager->key_shortcuts);
+	manager->key_shortcuts = NULL;
+	manager->keyshortcut_count = 0;
 }
 
 void pen_shortcut_free(ShortcutManager* manager) {
+	free(manager->pen_shortcuts);
+	manager->pen_shortcuts = NULL;
+	manager->penshortcut_count = 0;
 }
 

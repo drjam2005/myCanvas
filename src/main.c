@@ -25,7 +25,11 @@ int main(void) {
 			void* data = plug.plug_pre_reload();
 			if(!reloadPlug(&plug))
 				return 1;
-			plug.plug_post_reload(data);
+			if (!plug.plug_post_reload(data)) {
+				fprintf(stderr, "Could not register shortcuts after reloading the canvas plugin.\n");
+				CloseWindow();
+				return 1;
+			}
 			printf("reloading!\n");
 #else
 			printf("static!\n");

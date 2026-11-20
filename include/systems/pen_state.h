@@ -11,9 +11,15 @@
 
 typedef enum {
 	PEN_NULL = 0,
-	PEN_PRESSED,
-	PEN_DOWN,
-	PEN_RELEASED,
+	PEN_PRESSED         = 1u << 0,
+	PEN_DOWN            = 1u << 1,
+	PEN_RELEASED        = 1u << 2,
+	MOUSE_LEFT_PRESSED  = 1u << 3,
+	MOUSE_LEFT_DOWN     = 1u << 4,
+	MOUSE_LEFT_RELEASED = 1u << 5,
+	MOUSE_RIGHT_PRESSED  = 1u << 6,
+	MOUSE_RIGHT_DOWN     = 1u << 7,
+	MOUSE_RIGHT_RELEASED = 1u << 8,
 } PEN_STATE;
 
 #endif

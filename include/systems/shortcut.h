@@ -35,6 +35,7 @@ typedef struct {
 } ShortcutManager;
 
 bool key_shortcut_register(ShortcutManager* manager, void (*func)(Core*), size_t key_count, const KeyboardKey* keys);
+// A pointer shortcut matches any flag in state. PEN_NULL matches an idle pointer.
 bool pen_shortcut_register(ShortcutManager* manager, void (*func)(Core*), PEN_STATE state, size_t key_count, const KeyboardKey* keys);
 
 void key_shortcut_update(ShortcutManager* manager, Core* core);

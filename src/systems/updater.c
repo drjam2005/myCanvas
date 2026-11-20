@@ -12,11 +12,18 @@ void update(Core* core) {
 	state->isPanning = state->mouseDown && IsKeyDown(KEY_SPACE);
 	state->pen_state = PEN_NULL;
 	if (state->mousePressed)
-		state->pen_state = PEN_PRESSED;
+		state->pen_state |= MOUSE_LEFT_PRESSED;
 	else if (state->mouseReleased)
-		state->pen_state = PEN_RELEASED;
+		state->pen_state |= MOUSE_LEFT_RELEASED;
 	else if (state->mouseDown)
-		state->pen_state = PEN_DOWN;
+		state->pen_state |= MOUSE_LEFT_DOWN;
+
+	if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON))
+		state->pen_state |= MOUSE_RIGHT_PRESSED;
+	else if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON))
+		state->pen_state |= MOUSE_RIGHT_RELEASED;
+	else if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
+		state->pen_state |= MOUSE_RIGHT_DOWN;
 
 	if(state->isPanning)
 		state->origin = Vector2Subtract(state->origin, Vector2Subtract(state->mousePos, state->prevPos));

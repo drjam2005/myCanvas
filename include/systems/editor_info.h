@@ -17,6 +17,8 @@ typedef struct {
 	bool mouseDown;
 	bool mouseReleased;
 
+	bool isErasing;
+
 	PEN_STATE pen_state;
 
 	Vector2 mousePos;

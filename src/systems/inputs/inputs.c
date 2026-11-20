@@ -9,10 +9,19 @@ void draw(Core* core) {
 	if (state->mousePressed)
 		state->prevPos = state->mousePos;
 	if (state->mouseDown && !state->isPanning) {
-		DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), 20.0f, BLACK);
-		DrawCircleV(Vector2Add(state->origin, state->mousePos), 10.0f, BLACK);
+		if(state->isErasing) {
+			DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), 20.0f, RED);
+			DrawCircleV(Vector2Add(state->origin, state->mousePos), 10.0f, RED);
+		} else {
+			DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), 20.0f, BLACK);
+			DrawCircleV(Vector2Add(state->origin, state->mousePos), 10.0f, BLACK);
+		}
 		state->prevPos = state->mousePos;
 	}
 
 	EndTextureMode();
+}
+
+void toggleDrawing(Core* core) {
+	core->state.isErasing = !core->state.isErasing;
 }

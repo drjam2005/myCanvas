@@ -5,5 +5,6 @@
 #include "../editor_info.h"
 
 void draw(Core* core);
+void toggleDrawing(Core* core);
 
 #endif

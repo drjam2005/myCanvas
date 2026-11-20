@@ -8,14 +8,20 @@
 
 Core* core = NULL;
 
-static bool register_draw_shortcuts(ShortcutManager* shortcuts) {
-	return PEN_SHORTCUT(shortcuts, draw, PEN_PRESSED) &&
-	       PEN_SHORTCUT(shortcuts, draw, PEN_DOWN);
+static bool register_shortcuts(ShortcutManager* shortcuts) {
+	if (PEN_SHORTCUT(shortcuts, draw, MOUSE_LEFT_PRESSED | MOUSE_LEFT_DOWN) &&
+	    KEY_SHORTCUT(shortcuts, toggleDrawing, KEY_E))
+		return true;
+
+	key_shortcut_free(shortcuts);
+	pen_shortcut_free(shortcuts);
+	return false;
 }
 
 bool plug_init(void) {
 	if(core != NULL) {
-		free(core->shortcuts.pen_shortcuts);
+		key_shortcut_free(&core->shortcuts);
+		pen_shortcut_free(&core->shortcuts);
 		free(core);
 	}
 	core = (Core*)calloc(1, sizeof(*core));
@@ -28,7 +34,7 @@ bool plug_init(void) {
 		ClearBackground(RAYWHITE);
 	EndTextureMode();
 
-	return register_draw_shortcuts(&core->shortcuts);
+	return register_shortcuts(&core->shortcuts);
 }
 
 void plug_render() {
@@ -45,11 +51,10 @@ void* plug_pre_reload(void) {
 	return core;
 }
 
-void plug_post_reload(void* data) {
+bool plug_post_reload(void* data) {
 	core = (Core*)data;
 	// Re-register callbacks from the current copy of the shared library.
-	free(core->shortcuts.pen_shortcuts);
-	core->shortcuts.pen_shortcuts = NULL;
-	core->shortcuts.penshortcut_count = 0;
-	register_draw_shortcuts(&core->shortcuts);
+	key_shortcut_free(&core->shortcuts);
+	pen_shortcut_free(&core->shortcuts);
+	return register_shortcuts(&core->shortcuts);
 }
