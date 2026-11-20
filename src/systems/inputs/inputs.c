@@ -1,6 +1,6 @@
 #include "../../../include/systems/inputs/inputs.h"
 
-void draw(Core* core) {
+void func_draw(Core* core) {
 	Canvas* canvas = &core->canvas;
 	editorState* state = &core->state;
 
@@ -22,6 +22,18 @@ void draw(Core* core) {
 	EndTextureMode();
 }
 
-void toggleDrawing(Core* core) {
+void func_toggle_drawing_mode(Core* core) {
 	core->state.isErasing = !core->state.isErasing;
+}
+
+void func_create_layer(Core* core) {
+	create_layer(&core->canvas, TextFormat("Layer %zu", core->canvas.layer_count + 1));
+}
+
+void func_select_layer_up(Core* core) {
+	core->state.selectedLayer = Clamp(core->state.selectedLayer + 1, 0, core->canvas.layer_count - 1);
+}
+
+void func_select_layer_down(Core* core) {
+	core->state.selectedLayer = Clamp(core->state.selectedLayer - 1, 0, core->canvas.layer_count - 1);
 }

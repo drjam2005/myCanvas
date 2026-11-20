@@ -11,7 +11,7 @@
 #endif
 
 typedef struct {
-	const char* layer_name;
+	char layer_name[64];
     RenderTexture2D tex;
 	BlendMode blending_mode;
 	char opacity;

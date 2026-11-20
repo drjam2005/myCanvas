@@ -9,7 +9,7 @@
 
 int main(void) {
     InitWindow(800, 600, "myCanvas");
-	//SetTargetFPS(60);
+	SetTargetFPS(60);
 	Plug plug = {0};
 
 	if(!reloadPlug(&plug) || !plug.plug_init()) {

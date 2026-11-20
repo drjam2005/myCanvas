@@ -9,13 +9,14 @@
 Core* core = NULL;
 
 static bool register_shortcuts(ShortcutManager* shortcuts) {
-	if (PEN_SHORTCUT(shortcuts, draw, MOUSE_LEFT_PRESSED | MOUSE_LEFT_DOWN) &&
-	    KEY_SHORTCUT(shortcuts, toggleDrawing, KEY_E))
-		return true;
+	PEN_SHORTCUT(shortcuts, func_draw, MOUSE_LEFT_PRESSED | MOUSE_LEFT_DOWN);
 
-	key_shortcut_free(shortcuts);
-	pen_shortcut_free(shortcuts);
-	return false;
+	KEY_SHORTCUT(shortcuts, func_toggle_drawing_mode, KEY_E);
+	KEY_SHORTCUT(shortcuts, func_create_layer, KEY_LEFT_CONTROL, KEY_E);
+	KEY_SHORTCUT(shortcuts, func_select_layer_up, KEY_LEFT_CONTROL, KEY_W);
+	KEY_SHORTCUT(shortcuts, func_select_layer_down, KEY_LEFT_CONTROL, KEY_S);
+
+	return true;
 }
 
 bool plug_init(void) {
@@ -27,6 +28,7 @@ bool plug_init(void) {
 	core = (Core*)calloc(1, sizeof(*core));
 	core->canvas.dimensions = (Vector2){(int)GetScreenWidth(), (int)GetScreenHeight()};
 	create_layer(&core->canvas, "background");
+	create_layer(&core->canvas, "Layer 1"); core->state.selectedLayer = 1;
 
 	// let's manually edit the layer "background" to be white
 	Layer* layer = &core->canvas.layers[0];

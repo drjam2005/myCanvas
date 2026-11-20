@@ -13,11 +13,16 @@ void render(Core* core) {
 	if(state->selectedLayer >= canvas->layer_count)
 		return;
 
-	for(int i = 0; i < canvas->layer_count; ++i) {
+	for(int i = 0; i < canvas->layer_count; ++i)
 		render_layer(state, canvas->layers[i]);
-	}
 
-	DrawText(TextFormat("S: (%d), C: (%zu)", state->selectedLayer, canvas->layer_count), 20, 20, 30, BLACK);
+	int y = 55;
+	for(int i = canvas->layer_count - 1; i >= 0; --i) {
+		bool selected = i == state->selectedLayer;
+		const char* label = TextFormat("%s%s", canvas->layers[i].layer_name, selected ? " [SELECTED]" : "");
+		DrawText(label, 20, y, 20, selected ? GREEN : BLACK);
+		y += 25;
+	}
 }
 
 void render_layer(editorState* state, Layer layer) {
