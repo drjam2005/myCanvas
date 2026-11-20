@@ -21,5 +21,5 @@ typedef struct {
 	size_t layer_count; 
 } Canvas;
 
-void create_layer(Canvas* canvas, const char* layer_name);
+Layer* create_layer(Canvas* canvas, const char* layer_name);
 #endif

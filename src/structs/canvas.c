@@ -1,14 +1,18 @@
 #include "../../include/structs/canvas.h"
+#include <string.h>
 #include <stdlib.h>
 
-void create_layer(Canvas* canvas, const char* layer_name) {
+Layer* create_layer(Canvas* canvas, const char* layer_name) {
 	if(canvas == NULL)
-		return;
+		return NULL;
 
-	void* temp = realloc(canvas->layers, sizeof(Layer)*(canvas->layer_count+1));
-	if(temp == NULL)
-		return;
-	canvas->layer_count++;
+	Layer* temp = realloc(canvas->layers, sizeof(Layer)*(canvas->layer_count+1));
+	if(temp == NULL) 
+		return NULL;
 	canvas->layers = temp;
-	canvas->layers[canvas->layer_count-1] = createLayer(canvas->dimensions, layer_name);
+	memmove(canvas->layers + 1, canvas->layers, (canvas->layer_count)*(sizeof(Layer)));
+	canvas->layer_count++;
+	canvas->layers[0] = createLayer(canvas->dimensions, layer_name);
+
+	return &canvas->layers[0];
 }

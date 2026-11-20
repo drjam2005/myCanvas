@@ -28,10 +28,10 @@ bool plug_init(void) {
 	core = (Core*)calloc(1, sizeof(*core));
 	core->canvas.dimensions = (Vector2){(int)GetScreenWidth(), (int)GetScreenHeight()};
 	create_layer(&core->canvas, "background");
-	create_layer(&core->canvas, "Layer 1"); core->state.selectedLayer = 1;
+	create_layer(&core->canvas, "Layer 1"); core->state.selectedLayer = 0;
 
 	// let's manually edit the layer "background" to be white
-	Layer* layer = &core->canvas.layers[0];
+	Layer* layer = &core->canvas.layers[1];
 	BeginTextureMode(layer->tex);
 		ClearBackground(RAYWHITE);
 	EndTextureMode();
