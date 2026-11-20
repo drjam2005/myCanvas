@@ -29,6 +29,7 @@ typedef struct {
 	float rotation;
 
 	int selectedLayer;
+	Color currentColor;
 } editorState;
 
 #endif
