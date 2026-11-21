@@ -11,6 +11,9 @@ void update(Core* core) {
 	state->mouseReleased = IsMouseButtonReleased(MOUSE_LEFT_BUTTON);
 	state->isPanning = state->mouseDown && IsKeyDown(KEY_SPACE);
 	state->pen_state = PEN_NULL;
+
+	state->brushSize += GetMouseWheelMove();
+
 	if (state->mousePressed)
 		state->pen_state |= MOUSE_LEFT_PRESSED;
 	else if (state->mouseReleased)

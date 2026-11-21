@@ -40,6 +40,8 @@ bool plug_init(int width, int height) {
 	if(!create_layer(&core->canvas, "Background") || !create_layer(&core->canvas, "Layer 1"))
 		return false;
 
+	core->state.brushSize = 5.0f;
+
 	// let's manually edit the layer "background" to be white
 	Layer* layer = &core->canvas.layers[1];
 	BeginTextureMode(layer->tex);

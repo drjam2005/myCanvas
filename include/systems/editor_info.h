@@ -30,6 +30,7 @@ typedef struct {
 
 	int selectedLayer;
 	Color currentColor;
+	float brushSize;
 } editorState;
 
 #endif

@@ -23,6 +23,8 @@ void render(Core* core) {
 		DrawText(label, 20, y, 20, selected ? GREEN : BLACK);
 		y += 25;
 	}
+
+	DrawCircleLinesV(state->mousePos, state->brushSize, GRAY);
 }
 
 void render_layer(editorState* state, Layer layer) {

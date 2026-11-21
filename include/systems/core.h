@@ -27,6 +27,8 @@ typedef struct Core {
 	size_t snapshot_index; // 0 is the newest snapshot
 	bool stroke_changed;
 
+	float brushSize;
+
 	editorState state;
 	ShortcutManager shortcuts;
 } Core;

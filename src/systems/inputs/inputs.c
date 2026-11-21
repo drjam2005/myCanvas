@@ -15,12 +15,12 @@ void func_draw(Core* core) {
 		if(state->isErasing) {
 			rlSetBlendFactors(RL_ZERO, RL_ONE_MINUS_SRC_ALPHA, RL_SRC_ALPHA);
 			rlSetBlendMode(BLEND_CUSTOM);
-				DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), 20.0f, RED);
-				DrawCircleV(Vector2Add(state->origin, state->mousePos), 10.0f, RED);
+				DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), state->brushSize*2.0f, WHITE);
+				DrawCircleV(Vector2Add(state->origin, state->mousePos), state->brushSize, WHITE);
 			rlSetBlendMode(BLEND_ALPHA);
 		} else {
-			DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), 20.0f, state->currentColor);
-			DrawCircleV(Vector2Add(state->origin, state->mousePos), 10.0f, state->currentColor);
+			DrawLineEx(Vector2Add(state->origin, state->prevPos), Vector2Add(state->origin, state->mousePos), state->brushSize*2.0f, state->currentColor);
+			DrawCircleV(Vector2Add(state->origin, state->mousePos), state->brushSize, state->currentColor);
 		}
 		state->prevPos = state->mousePos;
 		core->stroke_changed = true;
