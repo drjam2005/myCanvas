@@ -12,7 +12,7 @@ int main(void) {
 	//SetTargetFPS(60);
 	Plug plug = {0};
 
-	if(!reloadPlug(&plug) || !plug.plug_init()) {
+	if(!reloadPlug(&plug) || !plug.plug_init(400, 300)) {
 		fprintf(stderr, "Could not initialize the canvas plugin.\n");
 		CloseWindow();
 		return 1;

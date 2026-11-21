@@ -22,7 +22,7 @@ static bool register_shortcuts(ShortcutManager* shortcuts) {
 	return true;
 }
 
-bool plug_init(void) {
+bool plug_init(int width, int height) {
 	if(core != NULL) {
 		key_shortcut_free(&core->shortcuts);
 		pen_shortcut_free(&core->shortcuts);
@@ -35,7 +35,7 @@ bool plug_init(void) {
 	core = (Core*)calloc(1, sizeof(*core));
 	if(core == NULL)
 		return false;
-	core->canvas.dimensions = (Vector2){(int)GetScreenWidth(), (int)GetScreenHeight()};
+	core->canvas.dimensions = (Vector2){width, height};
 	core->state.currentColor = BLACK;
 	if(!create_layer(&core->canvas, "Background") || !create_layer(&core->canvas, "Layer 1"))
 		return false;
